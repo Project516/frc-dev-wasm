@@ -115,7 +115,9 @@ const options: IWorkbenchConstructionOptions = {
   },
   productConfiguration: {
     nameShort: 'FRC Dev',
-    nameLong: 'FRC Dev',
+    // Help: About shows nameLong as its title, then the VS Code version and the date
+    nameLong: `FRC Dev ${__APP_VERSION__}`,
+    date: __APP_DATE__,
     extensionsGallery,
     // As in VS Code, links to GitHub open without asking, which sign-in relies on
     linkProtectionTrustedDomains: ['https://github.com', 'https://*.github.com']

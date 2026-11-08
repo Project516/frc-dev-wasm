@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
 
@@ -17,7 +19,21 @@ const vscodeCssAsString: Plugin = {
   }
 }
 
+// Shown in Help: About and on the Get Started page
+const version: string = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).version
+function commit(): string {
+  try {
+    return execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], { encoding: 'utf8' }).trim()
+  } catch {
+    return 'unknown'
+  }
+}
+
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(`${version} (${commit()})`),
+    __APP_DATE__: JSON.stringify(new Date().toISOString())
+  },
   base: process.env.BASE_PATH ?? './',
   build: {
     target: 'esnext',

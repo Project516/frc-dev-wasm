@@ -8,15 +8,9 @@ if (target) {
   const require = createRequire(new URL('../apps/ide/package.json', import.meta.url))
   const { chromium } = require('playwright-core')
   const PROXY = 'https://frc-proxy.project516.dev'
-  const reroute = async (route) => {
-    try {
-      const response = await route.fetch({ url: target + route.request().url().slice(PROXY.length), maxRedirects: 0 })
-      await route.fulfill({ response })
-    } catch (error) {
-      console.error(`ci-proxy: ${error.message}`)
-      await route.abort('failed').catch((abortError) => console.error(`ci-proxy: abort: ${abortError.message}`))
-    }
-  }
+  // The browser fetches the rewritten URL itself, so large git packs never pass through this process
+  const reroute = (route) =>
+    route.continue({ url: target + route.request().url().slice(PROXY.length) }).catch((error) => console.error(`ci-proxy: ${error.message}`))
   const withRoute = async (context) => {
     await context.route(`${PROXY}/**`, reroute)
     return context

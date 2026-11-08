@@ -22,8 +22,6 @@ function projectFiles(dir) {
   return files;
 }
 const names = process.argv.slice(2);
-// smartDashboardClient runs only by name: it crashes the browser tab, and the IDE's
-// test:smartdashboard covers SmartDashboard against a simulated robot
 const all = ['nt4Server', 'nt4RobotOnly', 'robotStartupFailure', 'compileTemplate', 'simulateTemplate', 'simulateVendors', 'simulateMaven', 'simulatePhoenixMotion', 'simulateOverrun', 'simulateDogLog'];
 
 const server = await createServer({

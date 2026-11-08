@@ -84,7 +84,7 @@ try {
   const about = page.locator('.monaco-dialog-box')
   await about.waitFor({ timeout: 10_000 })
   const aboutText = await about.innerText()
-  check('Help: About names the release and its commit', !process.env.SMOKE_URL ? aboutText.includes(`FRC Dev ${version} (${commit})`) : aboutText.includes(`FRC Dev ${version} (`), JSON.stringify(aboutText.slice(0, 200)))
+  check('Help: About names the release and its commit', !process.env.SMOKE_URL ? aboutText.includes(`FRC Dev ${version} (${commit})`) : new RegExp(`FRC Dev ${version.replaceAll('.', '\\.')}(-nightly)? \\(`).test(aboutText), JSON.stringify(aboutText.slice(0, 200)))
   await page.keyboard.press('Escape')
   await about.waitFor({ state: 'hidden', timeout: 10_000 })
 

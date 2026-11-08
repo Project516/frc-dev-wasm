@@ -151,16 +151,29 @@ function mavenUrl({ repo, group, artifact, version, ext = 'jar' }, classifier) {
 // A file the server does not have. Other failures are retried, then stop the run.
 class Missing extends Error {}
 
-async function get(url, read) {
+// Some vendor servers refuse connections from cloud CI runners. The IDE's proxy serves the same
+// maven repositories, so a file their server never answers for is fetched through it.
+const PROXY = 'https://frc-proxy.project516.dev/maven/';
+
+async function get(url, read, init) {
   for (let attempt = 1; ; attempt++) {
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, init);
       if (res.ok) return await read(res);
       const error = `GET ${url}: ${res.status}`;
       throw res.status < 500 && res.status !== 429 ? new Missing(error) : new Error(error);
     } catch (err) {
-      if (err instanceof Missing || attempt === 3) throw err;
-      await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
+      if (err instanceof Missing) throw err;
+      if (attempt < 3) {
+        await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
+        continue;
+      }
+      if (url.startsWith(PROXY) || !url.startsWith('https://')) throw err;
+      console.warn(`${url}: ${err.cause?.code ?? err.message}, trying the proxy`);
+      // The proxy answers 403 for a repository it does not list; that is the server's failure, not a missing file
+      return get(PROXY + url.slice('https://'.length), read, { headers: { origin: 'http://localhost' } }).catch((proxied) => {
+        throw proxied instanceof Missing && proxied.message.endsWith(': 403') ? err : proxied;
+      });
     }
   }
 }
@@ -169,9 +182,9 @@ async function download(url, dest, sha1) {
   if (fs.existsSync(dest)) return dest;
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   const buf = await get(url, async (res) => Buffer.from(await res.arrayBuffer()));
-  const checksum = sha1 ? await fetch(`${url}.sha1`) : undefined;
-  if (checksum?.ok) {
-    const expected = (await checksum.text()).trim().split(/\s+/)[0];
+  const checksum = sha1 ? await get(`${url}.sha1`, (res) => res.text()).catch(() => undefined) : undefined;
+  if (checksum) {
+    const expected = checksum.trim().split(/\s+/)[0];
     const actual = createHash('sha1').update(buf).digest('hex');
     if (expected !== actual) throw new Error(`sha1 mismatch for ${url}`);
   }

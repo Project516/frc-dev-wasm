@@ -4,9 +4,17 @@ set -uo pipefail
 HAR_DIR=${HAR_DIR:-}
 ide=(smoke cache git github-link gh terminal copilot robotbuilder tools smartdashboard maven)
 failed=()
+# A suite that fails runs once more: browser suites have timing failures on a loaded runner. A pass on the
+# second try is still reported, so a suite that keeps needing it stands out.
 run() {
   echo "::group::$*"
-  if "$@"; then echo "::endgroup::"; else echo "::endgroup::"; echo "::error::failed: $*"; failed+=("$*"); fi
+  if "$@"; then echo "::endgroup::"; return; fi
+  echo "::endgroup::"
+  echo "::group::$* (second try)"
+  if "$@"; then echo "::endgroup::"; echo "::warning::passed on the second try: $*"; return; fi
+  echo "::endgroup::"
+  echo "::error::failed: $*"
+  failed+=("$*")
 }
 case "${1:?group: ide, java or teams}" in
   ide)

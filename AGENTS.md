@@ -449,6 +449,10 @@ squash-merged, so the title becomes the commit on `master`.
 - The summary is one short sentence in the imperative, lower case, no period.
 - A breaking change for users or self-hosters (a removed setting, a proxy route that changes) gets a `!` after
   the type and says what to do in the body.
+- Releases: a `chore: release X.Y.Z` pull request sets the root `package.json` version. After it merges,
+  `node scripts/release-notes.mjs vPREV vX.Y.Z` prints the merged pull requests grouped by type; put a few
+  sentences for users above them and publish with `gh release create vX.Y.Z --notes-file ...`, which deploys
+  the site.
 
 A pull request description follows `.github/pull_request_template.md`.
 

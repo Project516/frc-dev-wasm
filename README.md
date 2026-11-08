@@ -10,7 +10,7 @@ season, and WPILib 2027 (the newest alpha) is offered too.
 
 ## Using it
 
-Open the site in a Chromium browser (Chrome, Edge or a Chromebook). It opens a VS Code workbench with the WPILib
+Open [frcdev.project516.dev](https://frcdev.project516.dev) in a Chromium browser (Chrome, Edge or a Chromebook). It opens a VS Code workbench with the WPILib
 extension. From the command palette (Ctrl+Shift+P):
 
 - **WPILib: Create a new project** from a template or example, or clone a team repository with **Git: Clone**.
@@ -18,7 +18,7 @@ extension. From the command palette (Ctrl+Shift+P):
 - **WPILib: Simulate Robot Code** runs it, with the WPILib Sim GUI in a panel.
 - **WPILib: Start Tool** opens Glass, OutlineViewer, AdvantageScope, Elastic, SmartDashboard and the other tools.
 
-A link opens a team repository directly: `https://project516.dev/frc-dev-wasm/?github=owner/repo` asks to clone it
+A link opens a team repository directly: `https://frcdev.project516.dev/?github=owner/repo` asks to clone it
 and opens it, as vscode.dev/github/owner/repo does.
 
 Projects stay in your browser's storage. Push them to GitHub, or use **WPILib: Export Project as Zip** to keep a

@@ -4,8 +4,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import proxy, { MAVEN_REPOSITORIES } from '../src/index.js'
 
-const env = { ALLOWED_ORIGINS: 'https://project516.dev' }
-const IDE = 'https://project516.dev'
+const env = { ALLOWED_ORIGINS: 'https://frcdev.project516.dev,https://frcdev-nightly.project516.dev' }
+const IDE = 'https://frcdev.project516.dev'
 const BASE = 'https://proxy.test'
 
 let upstreamRequests = []

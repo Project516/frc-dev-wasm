@@ -5,10 +5,10 @@ What the browser IDE does not do yet, or does differently from the desktop WPILi
 ## Browsers
 
 - Use a Chromium browser: Chrome, Edge or a Chromebook. That is where it is tested.
-- Firefox: checked with Firefox 159, where the workbench opens and the WPILib project creator works. Creating, building
-  and simulating a project are not tested there: the browser tests cannot drive webviews in Playwright's Firefox build.
-- Safari: checked only with WebKit on Linux, not on a Mac. Creating, building and simulating a project, the tools and
-  the Sim GUI work. Ctrl+Shift+P does not open the Command Palette there, F1 does. Cmd+Shift+P on a Mac is not tested.
+- Firefox: the workbench opens and the WPILib project creator works. Creating, building and simulating a project are not
+  tested there yet, so they may not work.
+- Safari: creating, building and simulating a project, the tools and the Sim GUI work. Ctrl+Shift+P does not open the
+  Command Palette there, F1 does. It has not been tested on a Mac yet.
 - **Open Folder** for a folder on your disk needs the File System Access API, which only Chromium browsers have.
   Elsewhere, keep projects in the browser and use **Export Project as Zip**.
 

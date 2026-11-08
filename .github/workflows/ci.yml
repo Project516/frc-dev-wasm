@@ -210,10 +210,15 @@ jobs:
         with:
           path: ~/.cache/frc-har
           key: har-${{ hashFiles('apps/ide/tests/teams.mjs', 'apps/ide/tests/spectrum.mjs', 'apps/ide/tests/junitTeam.mjs') }}
+      # The test browsers reach the proxy at its workers.dev address (scripts/ci-proxy.mjs); it is kept out of the logs
       - name: Run the ${{ matrix.group }} suites
-        run: bash scripts/ci-suites.sh ${{ matrix.group }}
+        run: |
+          [ -z "$CI_PROXY_URL" ] || echo "::add-mask::${CI_PROXY_URL#https://}"
+          bash scripts/ci-suites.sh ${{ matrix.group }}
         env:
           HAR_DIR: ~/.cache/frc-har
+          CI_PROXY_URL: ${{ secrets.CI_PROXY_URL }}
+          NODE_OPTIONS: --import ${{ github.workspace }}/scripts/ci-proxy.mjs
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

@@ -684,7 +684,8 @@ public class Robot extends TimedRobot {
   }
 }`,
     });
-    const sdJar = appPath(assets.url('tools/smartdashboard/SmartDashboard.jar'));
+    // SmartDashboard is a shared tool in runtime/tools/, one folder above the season's
+    const sdJar = appPath(assets.url('../tools/smartdashboard/SmartDashboard.jar'));
     const clientBuild = await compiler.compile(
       {
         'test/Client.java': `package test;
@@ -761,7 +762,7 @@ public final class Client {
       },
     });
     const clientJar = jvm.addFile('client.jar', clientBuild.jar);
-    const shimJar = appPath(assets.url('tools/smartdashboard/frcdevwasm-smartdashboard.jar'));
+    const shimJar = appPath(assets.url('../tools/smartdashboard/frcdevwasm-smartdashboard.jar'));
     const exitCode = await Promise.race([jvm.runMain('test.Client', [shimJar, clientJar, sdJar]), wait(90000).then(() => null)]);
     await wait(500);
     const value = (name: string) => server.getTopics().find((t) => t.name === name)?.value;

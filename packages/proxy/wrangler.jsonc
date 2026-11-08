@@ -5,6 +5,7 @@
   // Comma-separated addresses of the IDE. http://localhost is always allowed.
   "vars": { "ALLOWED_ORIGINS": "https://frcdev.project516.dev,https://frcdev-nightly.project516.dev" },
   "routes": [{ "pattern": "frc-proxy.project516.dev", "custom_domain": true }],
-  "workers_dev": false,
+  // CI reaches the Worker here, since Bot Fight Mode challenges datacenter addresses on the zone
+  "workers_dev": true,
   "observability": { "enabled": false }
 }

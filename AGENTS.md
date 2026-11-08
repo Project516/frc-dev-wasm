@@ -409,7 +409,10 @@ comes later. 2027 runs on java-web (Java 25), 2026 on CheerpJ (Java 17).
   with the same cache, then the suites in three parallel groups (`scripts/ci-suites.sh ide|java|teams`)
   on each pull request. `scripts/ci-changes.sh` picks the groups from the changed files: a pull request
   that changes only docs or the proxy builds nothing, and a file no rule names runs every group. The
-  team suites replay recorded downloads (`TEAMS_HAR`, cached by the hash of their tests). On master it only builds, which keeps the cache warm, and uploads the site to
+  team suites replay recorded downloads (`TEAMS_HAR`, cached by the hash of their tests). Cloudflare's Bot Fight
+  Mode challenges the runners' addresses on `frc-proxy.project516.dev`, so `scripts/ci-proxy.mjs` (loaded with
+  `NODE_OPTIONS=--import`) sends the test browsers' proxy requests to the same Worker at its workers.dev address,
+  the `CI_PROXY_URL` secret, which stays out of the repository and the logs. On master it only builds, which keeps the cache warm, and uploads the site to
   the R2 bucket behind `frcdev-nightly.project516.dev`, the nightly. Secrets live in the `cloudflare`
   environment, which only master can use.
 - CheerpJ needs HTTP Range support from the server. Vite's dev and preview

@@ -6,5 +6,7 @@
   "vars": { "ALLOWED_ORIGINS": "https://frcdev.project516.dev,https://frcdev-nightly.project516.dev" },
   "routes": [{ "pattern": "frc-proxy.project516.dev", "custom_domain": true }],
   "workers_dev": false,
-  "observability": { "enabled": false }
+  "observability": { "enabled": false },
+  // git and GitHub sign-in requests per address and location (src/index.js)
+  "ratelimits": [{ "name": "LIMITER", "namespace_id": "51601", "simple": { "limit": 60, "period": 10 } }]
 }

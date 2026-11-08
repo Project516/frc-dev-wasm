@@ -210,6 +210,21 @@ if (vendordeps.length) {
   console.log('skip marketplace check: run pnpm fetch-deps first')
 }
 
+await test('limits git and sign-in requests with the rate limiting binding, not maven downloads', async () => {
+  const keys = []
+  env.LIMITER = { limit: async ({ key }) => (keys.push(key), { success: false }) }
+  try {
+    const git = await call('/git/gitlab.com/team/robot.git/info/refs?service=git-upload-pack', { headers: { 'cf-connecting-ip': '203.0.113.7' } })
+    assert.equal(git.status, 429)
+    assert.equal(git.headers.get('access-control-allow-origin'), IDE, 'the IDE can read the refusal')
+    assert.equal(upstreamRequests.length, 0)
+    assert.deepEqual(keys, ['203.0.113.7'])
+    assert.equal((await call(PHOENIX)).status, 200)
+  } finally {
+    delete env.LIMITER
+  }
+})
+
 if (failures) {
   console.log(`${failures} failed`)
   process.exit(1)

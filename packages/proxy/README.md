@@ -18,9 +18,17 @@ because the server sends no CORS headers:
   POST requests of GitHub's device sign-in.
 
 Requests must come from an address in `ALLOWED_ORIGINS` or from
-`http://localhost`. Nothing is stored or logged by the Worker.
+`http://localhost`. Git and sign-in requests are limited to 60 per 10 seconds
+from one address (the `LIMITER` binding in `wrangler.jsonc`). Nothing is stored
+or logged by the Worker.
 
-The project's instance runs at `https://frc-proxy.project516.dev`.
+The project's instance runs at `https://frc-proxy.project516.dev`. The same
+Worker also answers at `https://frcdev-proxy.pages.dev`: a Cloudflare Pages
+project whose `pages/_worker.js` hands each request to it through a service
+binding named `PROXY`. Cloudflare's Bot Fight Mode on project516.dev challenges
+datacenter addresses (CI runners, some school and office networks), and
+pages.dev is outside it. CI uses that address. To change the forwarding file,
+upload `pages/_worker.js` as a new deployment of the Pages project.
 
 ## Deploy your own
 
@@ -39,10 +47,10 @@ is enough for a team.
    prints a pom file. Without the `Origin` header it answers 403.
 5. In the IDE, set `wpilib.vendorProxy` to `https://<your proxy>`. Vendor libraries, the
    vendor library list, git (its `/git` route) and GitHub sign-in then all go through it.
-6. The `Origin` check keeps other websites out, not scripts. Add a rate
-   limiting rule for the proxy's hostname in the Cloudflare dashboard
-   (Security, WAF, Rate limiting rules), so a script cannot use up the daily
-   requests.
+6. The `Origin` check keeps other websites out, not scripts. The Worker limits
+   git and sign-in requests itself; a rate limiting rule for the proxy's
+   hostname in the Cloudflare dashboard (Security, WAF, Rate limiting rules)
+   can also limit maven downloads, so a script cannot use up the daily requests.
 
 This repository deploys its own instance from GitHub Actions
 (`.github/workflows/deploy-proxy.yml`) when `src/` or `wrangler.jsonc` changes on

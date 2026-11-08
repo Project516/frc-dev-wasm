@@ -134,7 +134,7 @@ jobs:
       - run: |
           rclone copy site/assets r2:frcdev-nightly/assets --checksum --header-upload 'Cache-Control: public, max-age=31536000, immutable'
           rclone sync site r2:frcdev-nightly --checksum --exclude '/assets/**' --header-upload 'Cache-Control: no-cache'
-          rclone sync site/assets r2:frcdev-nightly/assets --checksum
+          rclone sync site/assets r2:frcdev-nightly/assets --checksum --header-upload 'Cache-Control: public, max-age=31536000, immutable'
         env:
           RCLONE_CONFIG_R2_TYPE: s3
           RCLONE_CONFIG_R2_PROVIDER: Cloudflare

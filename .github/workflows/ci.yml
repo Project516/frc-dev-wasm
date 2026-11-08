@@ -9,9 +9,10 @@ on:
 permissions:
   contents: read
 
+# A new push to a pull request replaces its run. Master runs all finish: a canceled build saves no cache.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # Type checks and the tests that need no built runtime
@@ -119,7 +120,7 @@ jobs:
     timeout-minutes: 30
     concurrency:
       group: nightly
-      cancel-in-progress: true
+      cancel-in-progress: false
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -129,9 +130,11 @@ jobs:
       # Uploads only the files whose checksum changed, so a push costs a few dozen R2 writes.
       # Vite's content-hashed assets never change, so Cloudflare may cache them for good; every
       # other file is revalidated, so a new nightly shows up at once.
+      # New assets first, then the pages that use them, then remove the old assets
       - run: |
-          rclone sync site/assets r2:frcdev-nightly/assets --checksum --header-upload 'Cache-Control: public, max-age=31536000, immutable'
+          rclone copy site/assets r2:frcdev-nightly/assets --checksum --header-upload 'Cache-Control: public, max-age=31536000, immutable'
           rclone sync site r2:frcdev-nightly --checksum --exclude '/assets/**' --header-upload 'Cache-Control: no-cache'
+          rclone sync site/assets r2:frcdev-nightly/assets --checksum
         env:
           RCLONE_CONFIG_R2_TYPE: s3
           RCLONE_CONFIG_R2_PROVIDER: Cloudflare

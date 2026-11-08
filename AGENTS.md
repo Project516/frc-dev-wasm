@@ -401,11 +401,15 @@ comes later. 2027 runs on java-web (Java 25), 2026 on CheerpJ (Java 17).
   methods that its jars add or remove, so the shim can follow. `node packages/java/build.mjs --year <y>`
   then prints how many natives have an Impl.
 - Deploys: `.github/workflows/deploy.yml` runs `pnpm build:all` and publishes
-  `apps/ide/dist` to GitHub Pages when a release is published (and by hand from the
-  Actions tab). It caches `.cache` and `apps/ide/public/runtime`, so only what
+  `apps/ide/dist` to GitHub Pages (`frcdev.project516.dev`) when a release is published (and by
+  hand from the Actions tab). It caches `.cache` and `apps/ide/public/runtime`, so only what
   changed is rebuilt. It runs `scripts/check-dist.sh` first, which refuses a dist without every
   separately built part. `.github/workflows/deploy-proxy.yml` deploys the proxy Worker when its code changes.
-  Tests run before merging, not in CI.
+- CI: `.github/workflows/ci.yml` runs the type checks and Node-only tests, then `pnpm build:all`
+  with the same cache, then every suite in three parallel groups (`scripts/ci-suites.sh ide|java|teams`)
+  on each pull request. On master it only builds, which keeps the cache warm, and uploads the site to
+  the R2 bucket behind `frcdev-nightly.project516.dev`, the nightly. Secrets live in the `cloudflare`
+  environment, which only master can use.
 - CheerpJ needs HTTP Range support from the server. Vite's dev and preview
   servers have it; `python -m http.server` does not.
 - On a CheerpJ classpath a directory entry needs a trailing slash, and a

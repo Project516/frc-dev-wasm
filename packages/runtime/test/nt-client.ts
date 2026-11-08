@@ -1,5 +1,5 @@
 // A third-party NT4 client, used to check the in-page server.
-import { NetworkTables, NetworkTablesTypeInfos } from 'ntcore-ts-client';
+import { NetworkTables, NetworkTablesTypeInfos } from '@ntcore-ts/client';
 
 const nt = NetworkTables.getInstanceByURI('localhost');
 const seen: Record<string, unknown> = {};

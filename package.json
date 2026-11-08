@@ -20,7 +20,6 @@
     "build:java-web": "pnpm --filter @frc-dev-wasm/java-web build",
     "build:java": "pnpm --filter @frc-dev-wasm/java build",
     "build:all": "pnpm fetch-deps && pnpm build:java && pnpm build:advantagescope && pnpm build:terminal && pnpm build:git && pnpm build:vscode-git && pnpm build:vscode-wpilib && pnpm build:java-web && pnpm build:wpigui-tools && pnpm build",
-    "deploy:pages": "bash scripts/deploy-pages.sh",
     "build:wpigui-tools": "pnpm --filter @frc-dev-wasm/wpigui-tools build",
     "build:glass": "pnpm --filter @frc-dev-wasm/wpigui-tools build glass",
     "build:outlineviewer": "pnpm --filter @frc-dev-wasm/wpigui-tools build outlineviewer",

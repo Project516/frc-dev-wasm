@@ -1,0 +1,32 @@
+name: Deploy proxy
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'packages/proxy/src/**'
+      - 'packages/proxy/wrangler.jsonc'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: proxy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: pnpm --filter @frc-dev-wasm/proxy test
+      - run: pnpm --filter @frc-dev-wasm/proxy run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -309,7 +309,7 @@ comes later. 2027 runs on java-web (Java 25), 2026 on CheerpJ (Java 17).
   `.jar` so hosts such as GitHub Pages do not compress them, since they apply Range to the compressed bytes) and
   `jdk/javac.pack` (javac loads it on first use), shared by the seasons that use it. `jdk.localedata` (27 MB) stays
   out: the IDE does not turn on java-web's `localeData`, so other locales format as English. It skips unless a season
-  of `WPILIB_YEARS` runs on it (`--force` copies anyway). `deploy-pages.sh` refuses to deploy without it.
+  of `WPILIB_YEARS` runs on it (`--force` copies anyway). `check-dist.sh` refuses a dist without it.
   `pnpm --filter @frc-dev-wasm/java-web test` (`test/frc.mjs`) runs the 2027 HAL and shim tests on java-web under
   Node with the package's `runNode` and checks that as many run as on HotSpot, that javac compiles WPILib's
   templates to the same bytes, and that a TimedRobot (`test/robot`) keeps its loop time. It needs
@@ -400,6 +400,12 @@ comes later. 2027 runs on java-web (Java 25), 2026 on CheerpJ (Java 17).
 - A new WPILib release: `node scripts/diff-natives.mjs <old-jar-dir> <new-jar-dir>` lists the native
   methods that its jars add or remove, so the shim can follow. `node packages/java/build.mjs --year <y>`
   then prints how many natives have an Impl.
+- Deploys: `.github/workflows/deploy.yml` runs `pnpm build:all` and publishes
+  `apps/ide/dist` to GitHub Pages on every push to master (and by hand from the
+  Actions tab). It caches `.cache` and `apps/ide/public/runtime`, so only what
+  changed is rebuilt. It runs `scripts/check-dist.sh` first, which refuses a dist without every
+  separately built part. `.github/workflows/deploy-proxy.yml` deploys the proxy Worker when its code changes.
+  Tests run before merging, not in CI.
 - CheerpJ needs HTTP Range support from the server. Vite's dev and preview
   servers have it; `python -m http.server` does not.
 - On a CheerpJ classpath a directory entry needs a trailing slash, and a
@@ -457,7 +463,7 @@ the default is every season the site serves. The first build takes a long time; 
 ones only recompile what changed. Pass `--jobs N` to change the default of 2
 parallel compiles. Needs `git`, `tar` and `python3` on the host, nothing else.
 Each built tool gets `source.txt`, a hash of what its season's build reads from this package (`source.mjs`).
-`pnpm build` and `deploy-pages.sh` stop when a tool's hash differs from the sources, and warn about a tool
+`pnpm build` and `check-dist.sh` stop when a tool's hash differs from the sources, and warn about a tool
 without one.
 A patch must be in plain unified format (`---`/`+++` lines, no `diff --git` or `index`
 lines): `git apply` skips a patch with git headers without an error when the work tree is

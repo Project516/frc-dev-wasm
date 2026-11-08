@@ -44,6 +44,12 @@ is enough for a team.
    (Security, WAF, Rate limiting rules), so a script cannot use up the daily
    requests.
 
+This repository deploys its own instance from GitHub Actions
+(`.github/workflows/deploy-proxy.yml`) when `src/` or `wrangler.jsonc` changes on
+master. It runs in the `cloudflare` environment, which allows only master and holds two
+secrets: `CLOUDFLARE_API_TOKEN`, an account API token with Workers Scripts Edit and
+Workers Routes Edit on the proxy's zone, and `CLOUDFLARE_ACCOUNT_ID`.
+
 Without wrangler: create a Worker in the Cloudflare dashboard, paste
 `src/index.js` as its code, add a plain text variable `ALLOWED_ORIGINS`, and
 add a custom domain or enable its workers.dev route.

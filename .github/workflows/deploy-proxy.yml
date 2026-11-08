@@ -12,9 +12,10 @@ on:
 permissions:
   contents: read
 
+# The newest master is the one to deploy, and the Worker upload is a single API call
 concurrency:
   group: proxy
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:

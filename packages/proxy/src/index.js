@@ -143,6 +143,11 @@ export default {
 
     const route = upstream(new URL(request.url), request.method)
     if (!route) return new Response('Not an allowed maven, git or sign-in request\n', { status: 403, headers: cors })
+    // The zone's rate limiting rule covers only the custom domain, not the pages.dev address, so limit here too
+    if (env.LIMITER && route.kind !== 'maven') {
+      const { success } = await env.LIMITER.limit({ key: request.headers.get('cf-connecting-ip') ?? '' })
+      if (!success) return new Response('Too many requests\n', { status: 429, headers: cors })
+    }
 
     const headers = new Headers({ 'user-agent': 'frc-dev-wasm-proxy' })
     if (route.kind === 'git') {

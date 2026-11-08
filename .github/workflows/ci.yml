@@ -27,25 +27,53 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @frc-dev-wasm/ide typecheck
-      - run: pnpm --filter @frc-dev-wasm/runtime typecheck
-      - run: pnpm --filter @frc-dev-wasm/sim-gui typecheck
-      - run: pnpm --filter @frc-dev-wasm/proxy test
-      - run: pnpm --filter @frc-dev-wasm/ide test:year
-      - run: pnpm --filter @frc-dev-wasm/ide test:security
-      - run: node apps/ide/tests/fileops.mjs && node apps/ide/tests/ghcli.mjs && node apps/ide/tests/copilotApi.mjs && node apps/ide/tests/wpilibDocs.mjs
-      - run: |
-          for t in vendor gradle gversion logs project simhost; do pnpm --filter @frc-dev-wasm/runtime test:$t; done
-      - run: pnpm --filter @frc-dev-wasm/sim-gui test:protocol
-      - run: pnpm --filter @frc-dev-wasm/wpigui-tools test:source
-
+      - id: install
+        run: pnpm install --frozen-lockfile
+      # Each check runs even when an earlier one failed, so one run lists every failure
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/ide typecheck
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/runtime typecheck
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/sim-gui typecheck
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/proxy test
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/ide test:year
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/ide test:security
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node apps/ide/tests/fileops.mjs
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node apps/ide/tests/ghcli.mjs
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node apps/ide/tests/copilotApi.mjs
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node apps/ide/tests/wpilibDocs.mjs
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/runtime test:vendor
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/runtime test:gradle
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/runtime test:gversion
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/runtime test:logs
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/runtime test:project
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/runtime test:simhost
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/sim-gui test:protocol
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/wpigui-tools test:source
   # Everything pnpm build:all makes. The cache keeps toolchains, sources and built runtime parts,
   # so a warm run rebuilds only what changed. Runs on master too, to keep that cache warm for
   # pull requests and releases.
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 300
+    outputs:
+      cache-key: ${{ steps.key.outputs.key }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -56,12 +84,15 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The inputs of the separately built parts; the suites restore the same key
+      - id: key
+        run: echo "key=build-${{ hashFiles('scripts/*.mjs', 'packages/wpigui-tools/*.mjs', 'packages/wpigui-tools/src/**', 'packages/wpigui-tools/patches/**', 'packages/wpigui-tools/targets/**', 'packages/vscode-wpilib/build.mjs', 'packages/vscode-wpilib/patches/**', 'packages/vscode-wpilib/replacements/**', 'packages/vscode-wpilib/shims/**', 'packages/java-web/build.mjs', 'packages/git-wasm/build.mjs', 'packages/git-wasm/config.mak', 'packages/git-wasm/patches/**', 'packages/git-wasm/src/pre.js', 'packages/git-wasm/src/library.js', 'packages/vscode-git/build.mjs', 'packages/vscode-git/shims/**', 'apps/ide/src/frc/terminal/utilities.ts') }}" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .cache
             apps/ide/public/runtime
-          key: build-${{ hashFiles('scripts/*.mjs', 'packages/wpigui-tools/*.mjs', 'packages/wpigui-tools/src/**', 'packages/wpigui-tools/patches/**', 'packages/wpigui-tools/targets/**', 'packages/vscode-wpilib/build.mjs', 'packages/vscode-wpilib/patches/**', 'packages/vscode-wpilib/replacements/**', 'packages/vscode-wpilib/shims/**', 'packages/java-web/build.mjs', 'packages/git-wasm/build.mjs', 'packages/git-wasm/config.mak', 'packages/git-wasm/patches/**', 'packages/git-wasm/src/pre.js', 'packages/git-wasm/src/library.js', 'packages/vscode-git/build.mjs', 'packages/vscode-git/shims/**', 'apps/ide/src/frc/terminal/utilities.ts') }}
+          key: ${{ steps.key.outputs.key }}
           restore-keys: build-
       - run: pnpm build:all
         env:
@@ -134,7 +165,7 @@ jobs:
           path: |
             .cache
             apps/ide/public/runtime
-          key: build-${{ hashFiles('scripts/*.mjs', 'packages/wpigui-tools/*.mjs', 'packages/wpigui-tools/src/**', 'packages/wpigui-tools/patches/**', 'packages/wpigui-tools/targets/**', 'packages/vscode-wpilib/build.mjs', 'packages/vscode-wpilib/patches/**', 'packages/vscode-wpilib/replacements/**', 'packages/vscode-wpilib/shims/**', 'packages/java-web/build.mjs', 'packages/git-wasm/build.mjs', 'packages/git-wasm/config.mak', 'packages/git-wasm/patches/**', 'packages/git-wasm/src/pre.js', 'packages/git-wasm/src/library.js', 'packages/vscode-git/build.mjs', 'packages/vscode-git/shims/**', 'apps/ide/src/frc/terminal/utilities.ts') }}
+          key: ${{ needs.build.outputs.cache-key }}
           restore-keys: build-
       # Brings the restored outputs up to date with this commit
       - run: pnpm build:all
@@ -142,6 +173,12 @@ jobs:
           WPIGUI_JOBS: 4
           TERMINAL_JOBS: 4
           GIT_JOBS: 4
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: playwright-
+      # Downloads the browser only when the cache lacks this Playwright's build
       - run: pnpm --filter @frc-dev-wasm/ide exec playwright-core install --with-deps chromium-headless-shell
       - name: Run the ${{ matrix.group }} suites
         run: bash scripts/ci-suites.sh ${{ matrix.group }}

@@ -185,7 +185,13 @@ async function download(url, dest, sha1) {
   if (fs.existsSync(dest)) return dest;
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   const buf = await get(url, async (res) => Buffer.from(await res.arrayBuffer()));
-  const checksum = sha1 ? await get(`${url}.sha1`, (res) => res.text()).catch(() => undefined) : undefined;
+  // A repository without checksums is fine; failing to fetch one that exists is not
+  const checksum = sha1
+    ? await get(`${url}.sha1`, (res) => res.text()).catch((err) => {
+        if (err instanceof Missing) return undefined;
+        throw err;
+      })
+    : undefined;
   if (checksum) {
     const expected = checksum.trim().split(/\s+/)[0];
     const actual = createHash('sha1').update(buf).digest('hex');

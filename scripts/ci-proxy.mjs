@@ -1,8 +1,6 @@
-// Loaded into the CI test processes with `node --import`. Cloudflare's Bot Fight Mode answers requests from
-// datacenter addresses, such as CI runners, to the proxy's hostname with a challenge page, which a browser
-// fetch reports as a network error. Every browser the tests start sends those requests to the same Worker
-// at the address in CI_PROXY_URL (https://frcdev-proxy.pages.dev, outside that zone). Routes a test sets
-// itself, such as mocked sign-in, are added later and take precedence.
+// Loaded into the CI test processes with `node --import`. Every browser the tests start sends its requests
+// for the proxy to the same Worker at CI's own address, CI_PROXY_URL (see packages/proxy/README.md). Routes a
+// test sets itself, such as mocked sign-in, are added later and take precedence.
 import { createRequire } from 'node:module'
 
 const target = process.env.CI_PROXY_URL?.replace(/\/$/, '')

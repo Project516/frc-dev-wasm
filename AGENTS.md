@@ -409,10 +409,10 @@ comes later. 2027 runs on java-web (Java 25), 2026 on CheerpJ (Java 17).
   with the same cache, then the suites in three parallel groups (`scripts/ci-suites.sh ide|java|teams`)
   on each pull request. `scripts/ci-changes.sh` picks the groups from the changed files: a pull request
   that changes only docs or the proxy builds nothing, and a file no rule names runs every group. The
-  team suites replay recorded downloads (`TEAMS_HAR`, cached by the hash of their tests). Cloudflare's Bot Fight
-  Mode challenges the runners' addresses on `frc-proxy.project516.dev`, so `scripts/ci-proxy.mjs` (loaded with
-  `NODE_OPTIONS=--import`) sends the test browsers' proxy requests to the same Worker at
-  `https://frcdev-proxy.pages.dev` (see `packages/proxy/README.md`). Tests that type into a VS Code input box
+  team suites replay recorded downloads (`TEAMS_HAR`, cached by the hash of their tests). CI reaches the proxy at
+  its own address, the `CI_PROXY_URL` secret: `scripts/ci-proxy.mjs` (loaded with `NODE_OPTIONS=--import`) sends
+  the test browsers' proxy requests there, and pull requests from forks, which get no secrets, can fail on
+  clones and vendor downloads. Tests that type into a VS Code input box
   first wait for `quickInputReady` (`apps/ide/tests/quickInput.mjs`): keys sent before the box has focus are lost. On master it only builds, which keeps the cache warm, and uploads the site to
   the R2 bucket behind `frcdev-nightly.project516.dev`, the nightly. Secrets live in the `cloudflare`
   environment, which only master can use.

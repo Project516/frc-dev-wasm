@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Runs one group of the browser and Java suites, each to the end, and fails if any failed.
 set -uo pipefail
+HAR_DIR=${HAR_DIR:-}
 ide=(smoke cache git github-link gh terminal copilot robotbuilder tools smartdashboard maven)
 failed=()
 run() {
@@ -23,10 +24,13 @@ case "${1:?group: ide, java or teams}" in
     run pnpm --filter @frc-dev-wasm/git-wasm test
     ;;
   teams)
-    run pnpm --filter @frc-dev-wasm/ide test:teams2026
-    run pnpm --filter @frc-dev-wasm/ide test:teams2027
-    run pnpm --filter @frc-dev-wasm/ide test:spectrum
-    run pnpm --filter @frc-dev-wasm/ide test:junit-team
+    # With HAR_DIR the team projects' downloads are recorded once and replayed after that
+    har=${HAR_DIR/#\~/$HOME}
+    [ -n "$har" ] && mkdir -p "$har/teams"
+    run env ${har:+TEAMS_HAR=$har/teams} pnpm --filter @frc-dev-wasm/ide test:teams2026
+    run env ${har:+TEAMS_HAR=$har/teams} pnpm --filter @frc-dev-wasm/ide test:teams2027
+    run env ${har:+SPECTRUM_HAR=$har/spectrum.zip} pnpm --filter @frc-dev-wasm/ide test:spectrum
+    run env ${har:+JUNIT_HAR=$har/junit-team.zip} pnpm --filter @frc-dev-wasm/ide test:junit-team
     ;;
   *) echo "unknown group $1" >&2; exit 2 ;;
 esac

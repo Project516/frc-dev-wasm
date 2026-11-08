@@ -15,6 +15,22 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Which suite groups this pull request needs (scripts/ci-changes.sh); pushes and manual runs need all
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      groups: ${{ steps.pick.outputs.groups }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - id: pick
+        run: bash scripts/ci-changes.sh "$BASE" | tee -a "$GITHUB_OUTPUT"
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+
   # Type checks and the tests that need no built runtime
   checks:
     runs-on: ubuntu-latest
@@ -67,10 +83,14 @@ jobs:
         run: pnpm --filter @frc-dev-wasm/sim-gui test:protocol
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm --filter @frc-dev-wasm/wpigui-tools test:source
+
   # Everything pnpm build:all makes. The cache keeps toolchains, sources and built runtime parts,
   # so a warm run rebuilds only what changed. Runs on master too, to keep that cache warm for
   # pull requests and releases.
   build:
+    needs: changes
+    # A pull request that changes only docs or the proxy needs no build
+    if: github.event_name != 'pull_request' || needs.changes.outputs.groups != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 300
     outputs:
@@ -145,15 +165,15 @@ jobs:
 
   # The browser and Java suites, in three groups of about the same length
   suites:
-    if: github.event_name != 'push'
+    if: github.event_name != 'push' && needs.changes.outputs.groups != '[]'
     # A failed check stops the hour of suites
-    needs: [checks, build]
+    needs: [changes, checks, build]
     runs-on: ubuntu-latest
     timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
-        group: [ide, java, teams]
+        group: ${{ fromJSON(needs.changes.outputs.groups) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -184,8 +204,16 @@ jobs:
           restore-keys: playwright-
       # Downloads the browser only when the cache lacks this Playwright's build
       - run: pnpm --filter @frc-dev-wasm/ide exec playwright-core install --with-deps chromium-headless-shell
+      # The team suites record their downloads once and replay them, keyed on the tests that pin the projects
+      - if: matrix.group == 'teams'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/frc-har
+          key: har-${{ hashFiles('apps/ide/tests/teams.mjs', 'apps/ide/tests/spectrum.mjs', 'apps/ide/tests/junitTeam.mjs') }}
       - name: Run the ${{ matrix.group }} suites
         run: bash scripts/ci-suites.sh ${{ matrix.group }}
+        env:
+          HAR_DIR: ~/.cache/frc-har
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

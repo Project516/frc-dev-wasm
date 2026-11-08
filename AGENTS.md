@@ -406,8 +406,10 @@ comes later. 2027 runs on java-web (Java 25), 2026 on CheerpJ (Java 17).
   changed is rebuilt. It runs `scripts/check-dist.sh` first, which refuses a dist without every
   separately built part. `.github/workflows/deploy-proxy.yml` deploys the proxy Worker when its code changes.
 - CI: `.github/workflows/ci.yml` runs the type checks and Node-only tests, then `pnpm build:all`
-  with the same cache, then every suite in three parallel groups (`scripts/ci-suites.sh ide|java|teams`)
-  on each pull request. On master it only builds, which keeps the cache warm, and uploads the site to
+  with the same cache, then the suites in three parallel groups (`scripts/ci-suites.sh ide|java|teams`)
+  on each pull request. `scripts/ci-changes.sh` picks the groups from the changed files: a pull request
+  that changes only docs or the proxy builds nothing, and a file no rule names runs every group. The
+  team suites replay recorded downloads (`TEAMS_HAR`, cached by the hash of their tests). On master it only builds, which keeps the cache warm, and uploads the site to
   the R2 bucket behind `frcdev-nightly.project516.dev`, the nightly. Secrets live in the `cloudflare`
   environment, which only master can use.
 - CheerpJ needs HTTP Range support from the server. Vite's dev and preview

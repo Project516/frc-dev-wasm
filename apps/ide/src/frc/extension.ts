@@ -91,7 +91,7 @@ function frcManifest(ownGit: boolean, ownWpilib: boolean): IExtensionManifest {
               default: 'https://frc-proxy.project516.dev',
               scope: 'application',
               markdownDescription:
-                'Proxy for downloading vendor libraries from maven servers that do not allow browser requests, such as CTRE and REV. Vendor jars are fetched directly when possible and through this proxy otherwise. Deploy your own from `packages/proxy`. Empty turns the proxy off, so those libraries can only be imported from disk.'
+                'The proxy for requests a browser cannot make itself: vendor libraries from maven servers that do not allow browser requests (CTRE, REV and others; jars are fetched directly when possible), the vendor library list, git remotes (its `/git` route, unless `git.corsProxy` is set) and GitHub sign-in. To use your own, deploy `packages/proxy` and set its address here. Empty turns the proxy off: vendor libraries can then only be imported from disk, and git in the browser needs `git.corsProxy`.'
             }
           }
         }

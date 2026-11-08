@@ -275,6 +275,20 @@ export async function browserTests({ root, check }) {
           new Promise((resolve) => setTimeout(() => resolve('no answer in 10 s'), 10_000).unref())
         ])
         console.log(`git --version through the IDE: ${answer}`)
+        // Show Git Output is offered whenever the Git extension runs, even when it found no git
+        await page.keyboard.press('Escape')
+        await page.keyboard.press('F1')
+        await page.locator('.quick-input-widget input').fill('> Git:')
+        await page.waitForTimeout(1500)
+        const rows = await page.locator('.quick-input-list .monaco-list-row').allInnerTexts()
+        console.log(`Git commands offered: ${rows.length ? rows.map((r) => r.split('\n')[0]).join(' | ') : 'none'}`)
+        const showOutput = page.locator('.quick-input-list .monaco-list-row', { hasText: 'Git: Show Git Output' }).first()
+        if (await showOutput.count()) {
+          await showOutput.click()
+          await page.waitForTimeout(2000)
+          const log = await page.locator('.output-view .view-lines').first().innerText().catch(() => '')
+          console.log(`Git output:\n${log.slice(-3000)}`)
+        }
         throw error
       })
       await page.locator('.quick-input-list .monaco-list-row', { hasText: 'robot-folder' }).first().click()

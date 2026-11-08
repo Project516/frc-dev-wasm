@@ -1,0 +1,13 @@
+{
+  "name": "@frc-dev-wasm/java-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --expose-gc test/frc.mjs"
+  },
+  "dependencies": {
+    "@project516/java-web": "0.1.1"
+  }
+}

@@ -1,0 +1,85 @@
+[
+ {
+  ">enabled": true,
+  ">autonomous": false,
+  ">test": false,
+  ">ds": true,
+  ">estop": false,
+  ">fms": false,
+  ">station": "red1",
+  ">match_time": -1,
+  ">game_data": "",
+  ">new_data": true
+ },
+ {
+  ">enabled": true,
+  ">autonomous": true,
+  ">test": false,
+  ">ds": true,
+  ">new_data": true
+ },
+ {
+  ">enabled": true,
+  ">autonomous": false,
+  ">test": true,
+  ">ds": true,
+  ">new_data": true
+ },
+ {
+  ">enabled": false,
+  ">autonomous": false,
+  ">test": false,
+  ">ds": true,
+  ">match_time": -1,
+  ">new_data": true
+ },
+ {
+  ">enabled": true,
+  ">autonomous": false,
+  ">test": false,
+  ">ds": true,
+  ">new_data": true
+ },
+ {
+  ">enabled": false,
+  ">autonomous": false,
+  ">test": false,
+  ">ds": false,
+  ">match_time": -1,
+  ">new_data": true
+ },
+ {
+  ">fms": true,
+  ">new_data": true
+ },
+ {
+  ">station": "blue2",
+  ">new_data": true
+ },
+ {
+  ">match_time": 15,
+  ">new_data": true
+ },
+ {
+  ">game_data": "abc",
+  ">new_data": true
+ },
+ {
+  ">enabled": false,
+  ">autonomous": false,
+  ">test": false,
+  ">ds": false,
+  ">estop": false,
+  ">fms": true,
+  ">station": "blue2",
+  ">match_time": 15,
+  ">game_data": "abc",
+  ">new_data": true
+ },
+ {
+  "mode": "autonomous"
+ },
+ {
+  "mode": "test"
+ }
+]

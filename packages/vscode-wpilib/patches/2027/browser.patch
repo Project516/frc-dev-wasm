@@ -1,0 +1,205 @@
+diff --git a/vscode-wpilib/src/docsapi.ts b/vscode-wpilib/src/docsapi.ts
+index 75ce2ac..9b49b52 100644
+--- a/vscode-wpilib/src/docsapi.ts
++++ b/vscode-wpilib/src/docsapi.ts
+@@ -1,6 +1,6 @@
+ 'use strict';
+ 
+-import * as extract from 'extract-zip';
++import extract from 'extract-zip';
+ import { mkdir, unlink } from 'fs/promises';
+ import * as path from 'path';
+ import * as vscode from 'vscode';
+diff --git a/vscode-wpilib/src/fetchhelpers.ts b/vscode-wpilib/src/fetchhelpers.ts
+index f17010c..05834e3 100644
+--- a/vscode-wpilib/src/fetchhelpers.ts
++++ b/vscode-wpilib/src/fetchhelpers.ts
+@@ -1,7 +1,6 @@
+ 'use strict';
+ 
+-import * as fs from 'fs';
+-import { mkdir } from 'fs/promises';
++import { mkdir, writeFile } from 'fs/promises';
+ import * as path from 'path';
+ 
+ const FILE_DOWNLOAD_TIMEOUT = 30000; // 30 seconds
+@@ -31,15 +30,6 @@ export async function downloadFileToStream(url: string, destPath: string): Promi
+ 
+   await mkdir(path.dirname(destPath), { recursive: true });
+ 
+-  const stream = fs.createWriteStream(destPath);
+-  stream.on('error', (error: unknown) => {
+-    // @ts-expect-error Error constructor should work
+-    throw new Error('Unable to download file ' + url, { cause: error });
+-  });
+-  if (res.body) {
+-    await res.body.pipeTo(fs.WriteStream.toWeb(stream));
+-  } else {
+-    throw new Error('Unable to download file ' + url);
+-  }
++  await writeFile(destPath, new Uint8Array(await res.arrayBuffer()));
+   return destPath;
+ }
+diff --git a/vscode-wpilib/src/java/deploydebug.ts b/vscode-wpilib/src/java/deploydebug.ts
+index 6fda7e5..5e3ef3d 100644
+--- a/vscode-wpilib/src/java/deploydebug.ts
++++ b/vscode-wpilib/src/java/deploydebug.ts
+@@ -350,9 +350,10 @@ export function registerCodeDeployerAndDebugger(externalApi: IExternalAPI, allow
+   deployDebugApi.addLanguageChoice('java');
+ 
+   deployDebugApi.registerCodeDeploy(new DeployCodeDeployer(externalApi));
++  // The robot program runs in the browser's robot JVM, not in a Java debug session
++  deployDebugApi.registerCodeSimulate(new SimulateCodeDeployer(externalApi));
+ 
+   if (allowDebug) {
+     deployDebugApi.registerCodeDebug(new DebugCodeDeployer(externalApi));
+-    deployDebugApi.registerCodeSimulate(new SimulateCodeDeployer(externalApi));
+   }
+ }
+diff --git a/vscode-wpilib/src/riolog/vscodeimpl.ts b/vscode-wpilib/src/riolog/vscodeimpl.ts
+index 44bcf23..d21e55f 100644
+--- a/vscode-wpilib/src/riolog/vscodeimpl.ts
++++ b/vscode-wpilib/src/riolog/vscodeimpl.ts
+@@ -2,6 +2,7 @@
+ 
+ import * as path from 'path';
+ import * as vscode from 'vscode';
++import { extensionResourceUri } from '../utilities';
+ import { IDisposable } from './shared/interfaces';
+ import { IErrorMessage, IPrintMessage } from './shared/message';
+ 
+@@ -74,13 +75,13 @@ export async function handleSave(saveData: (IPrintMessage | IErrorMessage)[]): P
+ 
+ function getHTML(webview: vscode.Webview, resourceRoot: string): string {
+   // Get paths to script and CSS
+-  const scriptPath = vscode.Uri.file(
++  const scriptPath = extensionResourceUri(
+     path.join(resourceRoot, '..', 'resources', 'dist', 'riologpage.js')
+   );
+-  const elementsCssPath = vscode.Uri.file(
++  const elementsCssPath = extensionResourceUri(
+     path.join(resourceRoot, '..', 'resources', 'media', 'vscode-elements.css')
+   );
+-  const rioLogCssPath = vscode.Uri.file(
++  const rioLogCssPath = extensionResourceUri(
+     path.join(resourceRoot, '..', 'resources', 'media', 'riolog.css')
+   );
+ 
+diff --git a/vscode-wpilib/src/utilities.ts b/vscode-wpilib/src/utilities.ts
+index 6d6bd0e..28769ca 100644
+--- a/vscode-wpilib/src/utilities.ts
++++ b/vscode-wpilib/src/utilities.ts
+@@ -88,6 +88,11 @@ export function setExtensionContext(context: vscode.ExtensionContext): void {
+   extensionContext = context;
+ }
+ 
++// A file of the extension folder, as a URI a webview can load
++export function extensionResourceUri(file: string): vscode.Uri {
++  return vscode.Uri.joinPath(extensionContext.extensionUri, path.relative(extensionContext.extensionPath, file));
++}
++
+ export async function getDesktopEnabled(buildgradle: string): Promise<boolean | undefined> {
+   try {
+     const dataIn = await readFile(buildgradle, 'utf8');
+diff --git a/vscode-wpilib/src/webviews/projectcreator.ts b/vscode-wpilib/src/webviews/projectcreator.ts
+index 468c30e..9fd298e 100644
+--- a/vscode-wpilib/src/webviews/projectcreator.ts
++++ b/vscode-wpilib/src/webviews/projectcreator.ts
+@@ -13,6 +13,7 @@ import {
+   ProjectType,
+ } from './pages/projectcreatorpagetypes';
+ import { WebViewBase } from './webviewbase';
++import { host } from 'frc-dev-wasm-host';
+ 
+ export class ProjectCreator extends WebViewBase {
+   public static async Create(
+@@ -31,7 +32,11 @@ export class ProjectCreator extends WebViewBase {
+     this.exampleTemplateApi = exampleTemplateApi;
+ 
+     this.disposables.push(
+-      vscode.commands.registerCommand('wpilibcore.createNewProject', () => {
++      vscode.commands.registerCommand('wpilibcore.createNewProject', async () => {
++        // The IDE asks which season to create for, and reloads for another season's extension
++        if (!(await host().startCreator())) {
++          return;
++        }
+         this.displayWebView(vscode.ViewColumn.Active, true, {
+           enableScripts: true,
+           retainContextWhenHidden: true,
+@@ -156,7 +161,8 @@ export class ProjectCreator extends WebViewBase {
+       canSelectFolders: true,
+       canSelectMany: false,
+       openLabel: i18n('ui', 'Select Folder'),
+-      defaultUri: data.toFolder.length > 0 ? vscode.Uri.file(data.toFolder) : undefined,
++      // Not the open folder, which would put the new project inside the open one
++      defaultUri: vscode.Uri.file(data.toFolder.length > 0 ? data.toFolder : host().projectsFolder),
+     };
+     const result = await vscode.window.showOpenDialog(open);
+ 
+diff --git a/vscode-wpilib/src/webviews/webviewbase.ts b/vscode-wpilib/src/webviews/webviewbase.ts
+index a1e472c..a557055 100644
+--- a/vscode-wpilib/src/webviews/webviewbase.ts
++++ b/vscode-wpilib/src/webviews/webviewbase.ts
+@@ -4,7 +4,7 @@ import { readFile } from 'fs/promises';
+ import * as path from 'path';
+ import * as vscode from 'vscode';
+ import { loadLocaleFile } from '../locale';
+-import { extensionContext } from '../utilities';
++import { extensionContext, extensionResourceUri } from '../utilities';
+ import { logger } from '../logger';
+ 
+ export abstract class WebViewBase {
+@@ -64,17 +64,17 @@ export abstract class WebViewBase {
+   private replaceResources(webview: vscode.Webview) {
+     // Add CSS for main.css
+     const cssUri = webview.asWebviewUri(
+-      vscode.Uri.file(path.join(extensionContext.extensionPath, 'resources', 'media', 'main.css'))
++      extensionResourceUri(path.join(extensionContext.extensionPath, 'resources', 'media', 'main.css'))
+     );
+     // Add CSS for vscode-elements.css
+     const elementsCssUri = webview.asWebviewUri(
+-      vscode.Uri.file(
++      extensionResourceUri(
+         path.join(extensionContext.extensionPath, 'resources', 'media', 'vscode-elements.css')
+       )
+     );
+     // Add CSS for icons.css
+     const iconsCssUri = webview.asWebviewUri(
+-      vscode.Uri.file(path.join(extensionContext.extensionPath, 'resources', 'media', 'icons.css'))
++      extensionResourceUri(path.join(extensionContext.extensionPath, 'resources', 'media', 'icons.css'))
+     );
+     // Update the CSS paths with the webview URI
+     this.html = this.html.replace('replaceresource/media/main.css', cssUri.toString());
+@@ -96,7 +96,7 @@ export abstract class WebViewBase {
+     );
+ 
+     // Replace resource paths
+-    const onDiskPath = vscode.Uri.file(extensionContext.extensionPath);
++    const onDiskPath = extensionContext.extensionUri;
+     const replacePath = webview.asWebviewUri(onDiskPath);
+     this.html = this.html.replace(/replaceresource/g, replacePath.toString());
+   }
+@@ -112,11 +112,11 @@ export abstract class WebViewBase {
+         retainContextWhenHidden: true,
+         ...(options || {}),
+         localResourceRoots: [
+-          vscode.Uri.file(extensionContext.extensionPath),
+-          vscode.Uri.file(path.join(extensionContext.extensionPath, 'resources', 'media')),
++          extensionContext.extensionUri,
++          vscode.Uri.joinPath(extensionContext.extensionUri, 'resources', 'media'),
+         ],
+       });
+-      this.webview.iconPath = vscode.Uri.file(path.join(this.resourceRoot, 'wpilib-icon-128.png'));
++      this.webview.iconPath = extensionResourceUri(path.join(this.resourceRoot, 'wpilib-icon-128.png'));
+       this.replaceResources(this.webview.webview);
+       this.webview.webview.html = this.html;
+       this.webview.onDidDispose(() => {
+@@ -137,7 +137,7 @@ export abstract class WebViewBase {
+ 
+   private getScriptTag(scriptPath: string, webview: vscode.Webview) {
+     let html = '';
+-    const scriptOnDisk = vscode.Uri.file(scriptPath);
++    const scriptOnDisk = extensionResourceUri(scriptPath);
+     // get the special URI to use with the webview
+     const scriptResourcePath = webview.asWebviewUri(scriptOnDisk);
+     html += '\r\n<script src="';

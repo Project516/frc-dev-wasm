@@ -1,0 +1,199 @@
+diff --git a/vscode-wpilib/src/docsapi.ts b/vscode-wpilib/src/docsapi.ts
+index f3a129a..eb28b25 100644
+--- a/vscode-wpilib/src/docsapi.ts
++++ b/vscode-wpilib/src/docsapi.ts
+@@ -1,6 +1,6 @@
+ 'use strict';
+ 
+-import * as extract from 'extract-zip';
++import extract from 'extract-zip';
+ import * as path from 'path';
+ import * as vscode from 'vscode';
+ import { downloadFileToStream } from './fetchhelpers';
+diff --git a/vscode-wpilib/src/java/deploydebug.ts b/vscode-wpilib/src/java/deploydebug.ts
+index 6cc5860..9ab0ec0 100644
+--- a/vscode-wpilib/src/java/deploydebug.ts
++++ b/vscode-wpilib/src/java/deploydebug.ts
+@@ -358,10 +358,11 @@ export class DeployDebug {
+     this.simulator = new SimulateCodeDeployer(externalApi);
+ 
+     deployDebugApi.registerCodeDeploy(this.deployDeployer);
++    // The robot program runs in the browser's robot JVM, not in a Java debug session
++    deployDebugApi.registerCodeSimulate(this.simulator);
+ 
+     if (allowDebug) {
+       deployDebugApi.registerCodeDebug(this.deployDebuger);
+-      deployDebugApi.registerCodeSimulate(this.simulator);
+     }
+   }
+ 
+diff --git a/vscode-wpilib/src/riolog/vscodeimpl.ts b/vscode-wpilib/src/riolog/vscodeimpl.ts
+index 5d0ba8e..b826ce2 100644
+--- a/vscode-wpilib/src/riolog/vscodeimpl.ts
++++ b/vscode-wpilib/src/riolog/vscodeimpl.ts
+@@ -3,7 +3,7 @@
+ import { EventEmitter } from 'events';
+ import * as path from 'path';
+ import * as vscode from 'vscode';
+-import { readFileAsync } from '../utilities';
++import { extensionResourceUri, readFileAsync } from '../utilities';
+ import {
+   IIPCReceiveMessage,
+   IIPCSendMessage,
+@@ -102,7 +102,7 @@ export class RioLogHTMLProvider implements IHTMLProvider {
+   }
+ 
+   public getHTML(webview: vscode.Webview): string {
+-    const onDiskPath = vscode.Uri.file(path.join(this.resourceRoot, 'dist', 'riologpage.js'));
++    const onDiskPath = extensionResourceUri(path.join(this.resourceRoot, 'dist', 'riologpage.js'));
+ 
+     // And get the special URI to use with the webview
+     const scriptResourcePath = webview.asWebviewUri(onDiskPath);
+diff --git a/vscode-wpilib/src/shared/generator.ts b/vscode-wpilib/src/shared/generator.ts
+index 2220918..0ddd1a2 100644
+--- a/vscode-wpilib/src/shared/generator.ts
++++ b/vscode-wpilib/src/shared/generator.ts
+@@ -1,5 +1,5 @@
+ import * as fs from 'fs';
+-import * as glob from 'glob';
++import glob from 'glob';
+ import * as path from 'path';
+ import { localize as i18n } from '../locale';
+ import { logger } from '../logger';
+diff --git a/vscode-wpilib/src/shared/importupdater.ts b/vscode-wpilib/src/shared/importupdater.ts
+index d7d4982..84bb09d 100644
+--- a/vscode-wpilib/src/shared/importupdater.ts
++++ b/vscode-wpilib/src/shared/importupdater.ts
+@@ -2,7 +2,7 @@
+ 
+ import * as fs from 'fs';
+ import * as jsonc from 'jsonc-parser';
+-import * as glob from 'glob';
++import glob from 'glob';
+ import * as path from 'path';
+ import { readFileAsync } from '../utilities';
+ 
+diff --git a/vscode-wpilib/src/utilities.ts b/vscode-wpilib/src/utilities.ts
+index 6f2c5bf..99db006 100644
+--- a/vscode-wpilib/src/utilities.ts
++++ b/vscode-wpilib/src/utilities.ts
+@@ -1,6 +1,6 @@
+ 'use strict';
+ import * as fs from 'fs';
+-import * as mkdirp from 'mkdirp';
++import mkdirp from 'mkdirp';
+ import * as ncp from 'ncp';
+ import * as path from 'path';
+ import * as util from 'util';
+@@ -121,6 +121,11 @@ export function setExtensionContext(context: vscode.ExtensionContext): void {
+   extensionContext = context;
+ }
+ 
++// A file of the extension folder, as a URI a webview can load
++export function extensionResourceUri(file: string): vscode.Uri {
++  return vscode.Uri.joinPath(extensionContext.extensionUri, path.relative(extensionContext.extensionPath, file));
++}
++
+ export function getDesktopEnabled(buildgradle: string): Promise<boolean | undefined> {
+   return new Promise<boolean | undefined>((resolve) => {
+     fs.readFile(buildgradle, 'utf8', (err, dataIn) => {
+diff --git a/vscode-wpilib/src/webviews/projectcreator.ts b/vscode-wpilib/src/webviews/projectcreator.ts
+index 47b86b8..9c791d9 100644
+--- a/vscode-wpilib/src/webviews/projectcreator.ts
++++ b/vscode-wpilib/src/webviews/projectcreator.ts
+@@ -14,6 +14,7 @@ import {
+ } from './pages/projectcreatorpagetypes';
+ import { WebViewBase } from './webviewbase';
+ import { Uri } from '../vscodeshim';
++import { host } from 'frc-dev-wasm-host';
+ 
+ export class ProjectCreator extends WebViewBase {
+   public static async Create(
+@@ -33,6 +34,10 @@ export class ProjectCreator extends WebViewBase {
+ 
+     this.disposables.push(
+       vscode.commands.registerCommand('wpilibcore.createNewProject', async () => {
++        // The IDE asks which season to create for, and reloads for another season's extension
++        if (!(await host().startCreator())) {
++          return;
++        }
+         this.displayWebView(vscode.ViewColumn.Active, true, {
+           enableScripts: true,
+           retainContextWhenHidden: true,
+@@ -118,8 +123,10 @@ export class ProjectCreator extends WebViewBase {
+     const items = [];
+     items.push({ label: i18n('projectcreator', 'Template'), value: ProjectType.Template });
+     items.push({ label: i18n('projectcreator', 'Example'), value: ProjectType.Example });
++    // The webview takes focus back after a pick closes and would dismiss the next one
+     const result = await vscode.window.showQuickPick(items, {
+       placeHolder: i18n('projectcreator', 'Select a project type'),
++      ignoreFocusOut: true,
+     });
+     if (result) {
+       await this.postMessage({
+@@ -135,6 +142,7 @@ export class ProjectCreator extends WebViewBase {
+     );
+     const result = await vscode.window.showQuickPick(languages, {
+       placeHolder: i18n('projectcreator', 'Select a language'),
++      ignoreFocusOut: true,
+     });
+     if (result) {
+       await this.postMessage({
+@@ -149,6 +157,7 @@ export class ProjectCreator extends WebViewBase {
+       this.exampleTemplateApi.getBases(data.projectType === ProjectType.Template, data.language),
+       {
+         placeHolder: i18n('projectcreator', 'Select a project base'),
++        ignoreFocusOut: true,
+       }
+     );
+     if (result) {
+@@ -165,7 +174,8 @@ export class ProjectCreator extends WebViewBase {
+       canSelectFolders: true,
+       canSelectMany: false,
+       openLabel: i18n('ui', 'Select Folder'),
+-      defaultUri: data.toFolder.length > 0 ? Uri.file(data.toFolder) : undefined,
++      // Not the open folder, which would put the new project inside the open one
++      defaultUri: Uri.file(data.toFolder.length > 0 ? data.toFolder : host().projectsFolder),
+     };
+     const result = await vscode.window.showOpenDialog(open);
+ 
+diff --git a/vscode-wpilib/src/webviews/webviewbase.ts b/vscode-wpilib/src/webviews/webviewbase.ts
+index 2c056d5..beb1281 100644
+--- a/vscode-wpilib/src/webviews/webviewbase.ts
++++ b/vscode-wpilib/src/webviews/webviewbase.ts
+@@ -3,7 +3,7 @@
+ import * as path from 'path';
+ import * as vscode from 'vscode';
+ import { loadLocaleFile } from '../locale';
+-import { extensionContext, readFileAsync } from '../utilities';
++import { extensionContext, extensionResourceUri, readFileAsync } from '../utilities';
+ 
+ export abstract class WebViewBase {
+   protected html: string = '';
+@@ -54,7 +54,7 @@ export abstract class WebViewBase {
+       path.join(extensionContext.extensionPath, 'resources', 'dist', 'localeloader.js'),
+       webview
+     );
+-    const onDiskPath = vscode.Uri.file(extensionContext.extensionPath);
++    const onDiskPath = extensionContext.extensionUri;
+     const replacePath = webview.asWebviewUri(onDiskPath);
+     this.html = this.html.replace(/replaceresource/g, replacePath.toString());
+   }
+@@ -71,7 +71,7 @@ export abstract class WebViewBase {
+         showOptions,
+         options
+       );
+-      this.webview.iconPath = vscode.Uri.file(path.join(this.resourceRoot, 'wpilib-icon-128.png'));
++      this.webview.iconPath = extensionResourceUri(path.join(this.resourceRoot, 'wpilib-icon-128.png'));
+       this.replaceResources(this.webview.webview);
+       this.webview.webview.html = this.html;
+       this.webview.onDidDispose(() => {
+@@ -94,7 +94,7 @@ export abstract class WebViewBase {
+ 
+   private getScriptTag(scriptPath: string, webview: vscode.Webview) {
+     let html = '';
+-    const scriptOnDisk = vscode.Uri.file(scriptPath);
++    const scriptOnDisk = extensionResourceUri(scriptPath);
+     // get the special URI to use with the webview
+     const scriptResourcePath = webview.asWebviewUri(scriptOnDisk);
+     html += '\r\n<script src="';

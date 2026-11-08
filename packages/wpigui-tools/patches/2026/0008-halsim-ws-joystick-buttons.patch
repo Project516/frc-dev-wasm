@@ -1,0 +1,10 @@
+--- a/simulation/halsim_ws_core/src/main/native/cpp/WSProvider_Joystick.cpp
++++ b/simulation/halsim_ws_core/src/main/native/cpp/WSProvider_Joystick.cpp
+@@ -53,6 +53,7 @@
+         // Button data
+         HAL_JoystickButtons buttons{};
+         std::vector<bool> buttonsValues;
++        HALSIM_GetJoystickButtons(provider->GetChannel(), &buttons);
+ 
+         for (int i = 0; i < buttons.count; i++) {
+           buttonsValues.push_back(((buttons.buttons >> i) & 0x1) == 1);

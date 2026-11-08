@@ -1,0 +1,341 @@
+diff -ruN a/fetch-pack.c b/fetch-pack.c
+--- a/fetch-pack.c
++++ b/fetch-pack.c
+@@ -894,6 +894,8 @@
+ 	return retval;
+ }
+ 
++int frc_tempfile(void);
++
+ static int sideband_demux(int in UNUSED, int out, void *data)
+ {
+ 	int *xd = data;
+@@ -973,6 +975,19 @@
+ 	int ret;
+ 
+ 	memset(&demux, 0, sizeof(demux));
++#ifdef __EMSCRIPTEN__
++	/* There is no second process to demultiplex: the pack goes to a file that index-pack reads */
++	if (use_sideband) {
++		int pack = frc_tempfile();
++
++		if (recv_sideband("fetch-pack", xd[0], pack))
++			die(_("error in sideband demultiplexer"));
++		lseek(pack, 0, SEEK_SET);
++		demux.out = pack;
++	}
++	else
++		demux.out = xd[0];
++#else
+ 	if (use_sideband) {
+ 		/* xd[] is talking with upload-pack; subprocess reads from
+ 		 * xd[0], spits out band#2 to stderr, and feeds us band#1
+@@ -987,7 +1002,7 @@
+ 	}
+ 	else
+ 		demux.out = xd[0];
+-
++#endif
+ 	if (!args->keep_pack && unpack_limit && !index_pack_args) {
+ 
+ 		if (read_pack_header(demux.out, &header))
+@@ -1100,8 +1115,10 @@
+ 			ret == 0;
+ 	else
+ 		die(_("%s failed"), cmd_name);
++#ifndef __EMSCRIPTEN__
+ 	if (use_sideband && finish_async(&demux))
+ 		die(_("error in sideband demultiplexer"));
++#endif
+ 
+ 	sigchain_pop(SIGPIPE);
+ 
+diff -ruN a/odb/source-files.c b/odb/source-files.c
+--- a/odb/source-files.c
++++ b/odb/source-files.c
+@@ -900,6 +900,13 @@
+ 		return -1;
+ 	}
+ 	fclose(in);
++#ifdef __EMSCRIPTEN__
++	{
++		/* There is no pipe: pack-objects runs now, and its output is read afterwards */
++		extern void frc_run_pending(struct child_process *cmd);
++		frc_run_pending(cp);
++	}
++#endif
+ 
+ 	generator->base.out = opts->pack_fd < 0 ? cp->out : -1;
+ 	generator->base.err = opts->progress_fd < 0 ? cp->err : -1;
+diff -ruN a/run-command.c b/run-command.c
+--- a/run-command.c
++++ b/run-command.c
+@@ -674,6 +674,226 @@
+ 	strbuf_release(&buf);
+ }
+ 
++#ifdef __EMSCRIPTEN__
++/*
++ * There are no processes in the browser. A child that is a git command runs to completion in a new
++ * module instance (frc_spawn_sync, provided by the host), given its standard input as a buffer.
++ */
++extern int frc_spawn_sync(const char *argv, int argv_len, const char *env, int env_len, const char *dir,
++			  int in_fd, const char *in, int in_len, char **out, int *out_len, char **err, int *err_len);
++
++extern char **environ;
++
++static void frc_pack(struct strbuf *sb, const char *const *v)
++{
++	for (; v && *v; v++) {
++		strbuf_addstr(sb, *v);
++		strbuf_addch(sb, 0);
++	}
++}
++
++/* Defined in git.c */
++int is_builtin(const char *s);
++
++/*
++ * Only git and its builtins exist here. An unknown git-<command> would be run as git <command>, which
++ * looks for git-<command> again, for ever.
++ */
++static int frc_is_git(struct child_process *cmd)
++{
++	const char *name = cmd->args.v[0];
++
++	return cmd->git_cmd || (name && (!strcmp(name, "git") || (skip_prefix(name, "git-", &name) && is_builtin(name))));
++}
++
++static int frc_spawn(struct child_process *cmd, const char *in, size_t in_len,
++		     struct strbuf *out, struct strbuf *err)
++{
++	struct strbuf argv = STRBUF_INIT, env = STRBUF_INIT, input = STRBUF_INIT;
++	char *captured_out = NULL, *captured_err = NULL;
++	int out_len = 0, err_len = 0, in_fd = -1, code;
++
++	if (!frc_is_git(cmd)) {
++		errno = ENOENT;
++		if (!cmd->silent_exec_failure)
++			error_errno("cannot run %s", cmd->args.v[0]);
++		child_process_clear(cmd);
++		return -1;
++	}
++	if (cmd->git_cmd)
++		strbuf_addstr(&argv, "git") , strbuf_addch(&argv, 0);
++	frc_pack(&argv, cmd->args.v);
++	/* setenv() changes the C environment, which the host cannot see, so all of it is passed */
++	frc_pack(&env, (const char *const *) environ);
++	frc_pack(&env, cmd->env.v);
++
++	/* The child reads a descriptor's file from the file system they share, not from a copy */
++	if (in)
++		strbuf_add(&input, in, in_len);
++	else if (cmd->in > 0 && !cmd->no_stdin)
++		in_fd = cmd->in;
++
++	fflush(NULL);
++	trace_run_command(cmd);
++	code = frc_spawn_sync(argv.buf, argv.len, env.buf, env.len, cmd->dir, in_fd, input.buf, input.len,
++			      &captured_out, &out_len, &captured_err, &err_len);
++	if (cmd->in > 0)
++		close(cmd->in);
++
++	if (out)
++		strbuf_add(out, captured_out, out_len);
++	else if (!cmd->no_stdout)
++		write_in_full(cmd->out > 0 ? cmd->out : cmd->stdout_to_stderr ? 2 : 1, captured_out, out_len);
++	if (err)
++		strbuf_add(err, captured_err, err_len);
++	else if (!cmd->no_stderr)
++		write_in_full(cmd->err > 0 ? cmd->err : 2, captured_err, err_len);
++	if (cmd->out > 0)
++		close(cmd->out);
++	if (cmd->err > 0)
++		close(cmd->err);
++	free(captured_out);
++	free(captured_err);
++	strbuf_release(&argv);
++	strbuf_release(&env);
++	strbuf_release(&input);
++	child_process_clear(cmd);
++	invalidate_lstat_cache();
++	return code;
++}
++
++#define FRC_CHILDREN 16
++#define FRC_PID_BASE 100000
++static struct {
++	int used;
++	int code;
++	int pending;		/* the command runs when it is finished, after the parent has written its input */
++	int out_dup, err_dup;
++	char in_name[40];
++} frc_children[FRC_CHILDREN];
++
++int frc_tempfile(void)
++{
++	char name[] = "/tmp/frc-child-XXXXXX";
++	int fd = mkstemp(name);
++
++	if (fd < 0)
++		die_errno("cannot create a temporary file");
++	unlink(name);
++	return fd;
++}
++
++/* Provided by the host: a stand-in for a remote helper such as git-remote-https */
++extern void frc_helper_open(const char *name, const char *url);
++
++static int frc_start_helper(struct child_process *cmd, int slot)
++{
++	frc_helper_open(cmd->args.v[1], cmd->args.v[2]);
++	cmd->in = open("/dev/frc-helper-in", O_WRONLY);
++	cmd->out = open("/dev/frc-helper-out", O_RDONLY);
++	frc_children[slot].used = 1;
++	frc_children[slot].code = 0;
++	frc_children[slot].pending = 0;
++	cmd->pid = FRC_PID_BASE + slot;
++	return 0;
++}
++
++static int frc_start(struct child_process *cmd)
++{
++	int out_fd = -1, err_fd = -1, slot;
++	int need_in = !cmd->no_stdin && cmd->in < 0;
++	int need_out = !cmd->no_stdout && !cmd->stdout_to_stderr && cmd->out < 0;
++	int need_err = !cmd->no_stderr && cmd->err < 0;
++
++	for (slot = 0; slot < FRC_CHILDREN && frc_children[slot].used; slot++)
++		;
++	if (slot == FRC_CHILDREN)
++		BUG("too many children");
++	if (cmd->git_cmd && cmd->args.v[0] && starts_with(cmd->args.v[0], "remote-"))
++		return frc_start_helper(cmd, slot);
++
++	/* Output goes to unlinked files: a pipe cannot be read to its end without another process */
++	if (need_out) {
++		out_fd = frc_tempfile();
++		cmd->out = dup(out_fd);
++	}
++	if (need_err) {
++		err_fd = frc_tempfile();
++		cmd->err = dup(err_fd);
++	}
++	frc_children[slot].used = 1;
++	frc_children[slot].pending = need_in;
++	cmd->pid = FRC_PID_BASE + slot;
++	if (need_in) {
++		/* The parent writes the input, and the command runs from finish_command */
++		int fd;
++
++		xsnprintf(frc_children[slot].in_name, sizeof(frc_children[slot].in_name), "/tmp/frc-stdin-%d", slot);
++		fd = open(frc_children[slot].in_name, O_WRONLY | O_CREAT | O_TRUNC, 0600);
++		frc_children[slot].out_dup = cmd->out;
++		frc_children[slot].err_dup = cmd->err;
++		cmd->in = fd;
++		cmd->out = need_out ? out_fd : cmd->out;
++		cmd->err = need_err ? err_fd : cmd->err;
++		return 0;
++	}
++	frc_children[slot].code = frc_spawn(cmd, NULL, 0, NULL, NULL);
++	if (need_out) {
++		lseek(out_fd, 0, SEEK_SET);
++		cmd->out = out_fd;
++	}
++	if (need_err) {
++		lseek(err_fd, 0, SEEK_SET);
++		cmd->err = err_fd;
++	}
++	return 0;
++}
++
++/*
++ * Runs a child that is waiting for its input. The parent's descriptors for the output are rewound,
++ * so it can read what the child wrote.
++ */
++static void frc_run_input_child(struct child_process *cmd, int slot)
++{
++	int out_parent = cmd->out, err_parent = cmd->err;
++
++	cmd->in = open(frc_children[slot].in_name, O_RDONLY);
++	cmd->out = frc_children[slot].out_dup;
++	cmd->err = frc_children[slot].err_dup;
++	frc_children[slot].code = frc_spawn(cmd, NULL, 0, NULL, NULL);
++	frc_children[slot].pending = 0;
++	unlink(frc_children[slot].in_name);
++	cmd->in = -1;
++	cmd->out = out_parent;
++	cmd->err = err_parent;
++	if (out_parent > 0)
++		lseek(out_parent, 0, SEEK_SET);
++	if (err_parent > 0)
++		lseek(err_parent, 0, SEEK_SET);
++}
++
++/* For a parent that reads the output of a child before finish_command, after closing its input */
++void frc_run_pending(struct child_process *cmd)
++{
++	if (cmd->pid >= FRC_PID_BASE && frc_children[cmd->pid - FRC_PID_BASE].pending)
++		frc_run_input_child(cmd, cmd->pid - FRC_PID_BASE);
++}
++
++static int frc_finish(struct child_process *cmd)
++{
++	int slot = cmd->pid - FRC_PID_BASE;
++	int code;
++
++	if (frc_children[slot].pending)
++		frc_run_input_child(cmd, slot);
++	code = frc_children[slot].code;
++	frc_children[slot].used = 0;
++	cmd->pid = -1;
++	child_process_clear(cmd);
++	return code;
++}
++#endif
++
+ int start_command(struct child_process *cmd)
+ {
+ 	int need_in, need_out, need_err;
+@@ -681,6 +901,10 @@
+ 	int failed_errno;
+ 	const char *str;
+ 
++#ifdef __EMSCRIPTEN__
++	return frc_start(cmd);
++#endif
++
+ 	/*
+ 	 * In case of errors we must keep the promise to close FDs
+ 	 * that have been passed in via ->in and ->out.
+@@ -1003,6 +1227,10 @@
+ 
+ int finish_command(struct child_process *cmd)
+ {
++#ifdef __EMSCRIPTEN__
++	if (cmd->pid >= FRC_PID_BASE)
++		return frc_finish(cmd);
++#endif
+ 	int ret = wait_or_whine(cmd->pid, cmd->args.v[0], 0);
+ 	trace2_child_exit(cmd, ret);
+ 	child_process_clear(cmd);
+@@ -1026,6 +1254,9 @@
+ 	if (cmd->out < 0 || cmd->err < 0)
+ 		BUG("run_command with a pipe can cause deadlock");
+ 
++#ifdef __EMSCRIPTEN__
++	return frc_spawn(cmd, NULL, 0, NULL, NULL);
++#endif
+ 	code = start_command(cmd);
+ 	if (code)
+ 		return code;
+@@ -1434,6 +1665,9 @@
+ 	struct io_pump io[3];
+ 	int nr = 0;
+ 
++#ifdef __EMSCRIPTEN__
++	return frc_spawn(cmd, in, in_len, out, err);
++#endif
+ 	if (in)
+ 		cmd->in = -1;
+ 	if (out)

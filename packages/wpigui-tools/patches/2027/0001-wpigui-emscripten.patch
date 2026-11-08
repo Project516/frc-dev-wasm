@@ -1,0 +1,284 @@
+--- a/wpigui/src/main/native/cpp/wpigui.cpp
++++ b/wpigui/src/main/native/cpp/wpigui.cpp
+@@ -17,6 +17,10 @@
+ #include <thread>
+ #include <utility>
+ 
++#ifdef __EMSCRIPTEN__
++#include <emscripten.h>
++#endif
++
+ #define SDL_MAIN_HANDLED
+ #include <IconsFontAwesome6.h>
+ #include <SDL3/SDL.h>
+@@ -160,11 +164,15 @@
+ }
+ 
+ static void Update2DRendererVSync() {
++  // The browser times the frames, see Main(). Turning vsync off would make SDL
++  // run the loop on timeouts without a delay.
++#ifndef __EMSCRIPTEN__
+   if (!gRendererContext.sdlRenderer) {
+     return;
+   }
+ 
+   SDL_SetRenderVSync(gRendererContext.sdlRenderer, gContext->fps == 0 ? 1 : 0);
++#endif
+ }
+ 
+ static void SetFPSInternal(int fps) {
+@@ -564,8 +572,32 @@
+   }
+ }
+ 
++#ifdef __EMSCRIPTEN__
++// The saved layout comes from a desktop window, often larger than the tab. It
++// is drawn scaled down to fit, as zooming out would; the saved size and window
++// positions do not change.
++static float gFitScale = 1;
++
++static void FitDisplay() {
++  ImGuiIO& io = ImGui::GetIO();
++  gFitScale = 1;
++  if (gContext->loadedWidthHeight && gContext->width > 0 &&
++      gContext->height > 0) {
++    gFitScale = (std::max)(0.05f, (std::min)({1.0f, io.DisplaySize.x / gContext->width,
++                                              io.DisplaySize.y / gContext->height}));
++  }
++  io.DisplaySize.x /= gFitScale;
++  io.DisplaySize.y /= gFitScale;
++  io.DisplayFramebufferScale.x *= gFitScale;
++  io.DisplayFramebufferScale.y *= gFitScale;
++}
++#endif
++
+ static void BuildImGuiFrame() {
+   ImGui_ImplSDL3_NewFrame();
++#ifdef __EMSCRIPTEN__
++  FitDisplay();
++#endif
+   // Start the Dear ImGui frame
+   ImGui::NewFrame();
+ 
+@@ -743,10 +775,14 @@
+ }
+ 
+ static void UpdateWindowSize(int width, int height) {
++#ifndef __EMSCRIPTEN__
++  // In a browser the canvas follows the page. The saved size stays, see
++  // FitDisplay.
+   if (!gContext->maximized) {
+     gContext->width = width;
+     gContext->height = height;
+   }
++#endif
+ }
+ 
+ static void UpdateWindowPos(int xpos, int ypos) {
+@@ -931,6 +967,7 @@
+   // pixel density itself through DisplayFramebufferScale, so folding the
+   // density in here as well would scale fonts twice.
+   float windowScale = 1.0;
++#ifndef __EMSCRIPTEN__
+   if (gContext->window) {
+     windowScale =
+         SDL_GetDisplayContentScale(SDL_GetDisplayForWindow(gContext->window));
+@@ -938,6 +975,7 @@
+       windowScale = 1.0f;
+     }
+   }
++#endif
+   float uiScale = gContext->userScale / 100.0 * windowScale;
+   if (uiScale < 0.5) {
+     uiScale = 0.5;
+@@ -992,6 +1030,10 @@
+   gContext->defaultWidth = width;
+   gContext->defaultHeight = height;
+ 
++#ifdef __EMSCRIPTEN__
++  // SDL GPU needs a WebGPU driver, which SDL has not got.
++  rendererPreference = RendererPreference::PREFER_2D;
++#endif
+   if (!ApplyRendererOverride(&rendererPreference)) {
+     return false;
+   }
+@@ -1159,6 +1201,10 @@
+   if ((SDL_GetWindowFlags(gContext->window) & SDL_WINDOW_MAXIMIZED) == 0) {
+     SDL_GetWindowSize(gContext->window, &gContext->width, &gContext->height);
+   }
++#ifdef __EMSCRIPTEN__
++  // The canvas fills the page and follows its size.
++  SDL_SetWindowFillDocument(gContext->window, true);
++#endif
+ 
+   // Set icons
+   if (!gContext->icons.empty()) {
+@@ -1319,7 +1365,17 @@
+   }
+ }
+ 
+-static void ProcessImGuiSDLEvent(const SDL_Event& event) {
++static void ProcessImGuiSDLEvent(SDL_Event event) {
++#ifdef __EMSCRIPTEN__
++  if (event.type == SDL_EVENT_MOUSE_MOTION) {
++    event.motion.x /= gFitScale;
++    event.motion.y /= gFitScale;
++  } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN ||
++             event.type == SDL_EVENT_MOUSE_BUTTON_UP) {
++    event.button.x /= gFitScale;
++    event.button.y /= gFitScale;
++  }
++#endif
+   if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN ||
+       event.type == SDL_EVENT_MOUSE_BUTTON_UP) {
+     // The ImGui SDL backend ignores button-event coordinates. Queue them as a
+@@ -1338,56 +1394,101 @@
+   ImGui_ImplSDL3_ProcessEvent(&event);
+ }
+ 
+-void gui::Main() {
+-  // Main loop
+-  double previousStartTime = 0.0;
+-  while (!gContext->exit) {
+-    double startTime = GetTime();
+-    double framePeriod = previousStartTime > 0.0
+-                             ? startTime - previousStartTime
+-                             : 1.0 / FALLBACK_MOUSE_MOTION_WHEEL_FPS;
+-    previousStartTime = startTime;
++#ifdef __EMSCRIPTEN__
++// Set by the app, see wpigui_emscripten.cpp.
++extern double wpiguiMinFrameMs;
++extern double wpiguiIdleFrameMs;
++extern "C" double wpiguiLastInputMs();
++#endif
+ 
+-    // Poll and handle events (inputs, window resize, etc.)
+-    SDL_Event event;
+-    while (SDL_PollEvent(&event)) {
+-      for (auto&& handler : gContext->eventHandlers) {
+-        if (handler) {
+-          handler(event);
+-        }
++// One pass of the main loop. Returns whether the window is minimized.
++static bool MainLoopIteration(double framePeriod) {
++  // Poll and handle events (inputs, window resize, etc.)
++  SDL_Event event;
++  while (SDL_PollEvent(&event)) {
++    for (auto&& handler : gContext->eventHandlers) {
++      if (handler) {
++        handler(event);
+       }
+-      ProcessImGuiSDLEvent(event);
++    }
++    ProcessImGuiSDLEvent(event);
+ 
+-      if (event.type == SDL_EVENT_QUIT) {
++    if (event.type == SDL_EVENT_QUIT) {
++      gContext->exit = true;
++    } else if (event.type >= SDL_EVENT_WINDOW_FIRST &&
++               event.type <= SDL_EVENT_WINDOW_LAST) {
++      HandleWindowEvent(event.window);
++      if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED &&
++          event.window.windowID == SDL_GetWindowID(gContext->window)) {
+         gContext->exit = true;
+-      } else if (event.type >= SDL_EVENT_WINDOW_FIRST &&
+-                 event.type <= SDL_EVENT_WINDOW_LAST) {
+-        HandleWindowEvent(event.window);
+-        if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED &&
+-            event.window.windowID == SDL_GetWindowID(gContext->window)) {
+-          gContext->exit = true;
+-        }
+       }
+     }
+-    CoalesceQueuedMouseMotionWheelEvents(framePeriod);
++  }
++  CoalesceQueuedMouseMotionWheelEvents(framePeriod);
+ 
+-    bool windowMinimized =
+-        (SDL_GetWindowFlags(gContext->window) & SDL_WINDOW_MINIMIZED) != 0;
++  bool windowMinimized =
++      (SDL_GetWindowFlags(gContext->window) & SDL_WINDOW_MINIMIZED) != 0;
+ 
+-    gContext->isRendering = true;
+-    UpdateFontScale();
+-    RenderFrame(windowMinimized);
+-    gContext->isRendering = false;
++  gContext->isRendering = true;
++  UpdateFontScale();
++  RenderFrame(windowMinimized);
++  gContext->isRendering = false;
+ 
+-    auto& io = ImGui::GetIO();
++  auto& io = ImGui::GetIO();
+ 
+-    // custom saving
+-    if (gContext->saveSettings) {
+-      if (io.WantSaveIniSettings) {
+-        gContext->saveSettings(false);
+-        io.WantSaveIniSettings = false;  // reset flag
+-      }
+-    }
++  // custom saving
++  if (gContext->saveSettings) {
++    if (io.WantSaveIniSettings) {
++      gContext->saveSettings(false);
++      io.WantSaveIniSettings = false;  // reset flag
++    }
++  }
++  return windowMinimized;
++}
++
++#ifdef __EMSCRIPTEN__
++static void EmscriptenFrame() {
++  // SDL switches the loop to timeouts when its renderer turns vsync off.
++  int timingMode;
++  int timingValue;
++  emscripten_get_main_loop_timing(&timingMode, &timingValue);
++  if (timingMode != EM_TIMING_RAF || timingValue != 1) {
++    emscripten_set_main_loop_timing(EM_TIMING_RAF, 1);
++  }
++
++  // Another page can share this thread, so an app can ask for fewer frames,
++  // and fewer still while nobody uses the app.
++  static double lastFrame = 0;
++  double now = emscripten_get_now();
++  double minMs = now - wpiguiLastInputMs() < 1000 ||
++                         wpiguiIdleFrameMs < wpiguiMinFrameMs
++                     ? wpiguiMinFrameMs
++                     : wpiguiIdleFrameMs;
++  if (now - lastFrame < minMs) {
++    return;
++  }
++  double framePeriod = lastFrame > 0 ? (now - lastFrame) / 1000.0
++                                     : 1.0 / FALLBACK_MOUSE_MOTION_WHEEL_FPS;
++  lastFrame = now;
++  MainLoopIteration(framePeriod);
++}
++#endif
++
++void gui::Main() {
++#ifdef __EMSCRIPTEN__
++  // The browser owns the loop. This does not return.
++  emscripten_set_main_loop(EmscriptenFrame, 0, true);
++#else
++  // Main loop
++  double previousStartTime = 0.0;
++  while (!gContext->exit) {
++    double startTime = GetTime();
++    double framePeriod = previousStartTime > 0.0
++                             ? startTime - previousStartTime
++                             : 1.0 / FALLBACK_MOUSE_MOTION_WHEEL_FPS;
++    previousStartTime = startTime;
++
++    bool windowMinimized = MainLoopIteration(framePeriod);
+ 
+     if (windowMinimized) {
+       SDL_Delay(10);
+@@ -1400,6 +1501,7 @@
+       }
+     }
+   }
++#endif
+ 
+   // Save (if custom save)
+   if (gContext->saveSettings) {

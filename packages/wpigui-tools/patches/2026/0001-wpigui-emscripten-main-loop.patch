@@ -1,0 +1,99 @@
+--- a/wpigui/src/main/native/cpp/wpigui.cpp
++++ b/wpigui/src/main/native/cpp/wpigui.cpp
+@@ -14,6 +14,10 @@
+ #include <thread>
+ #include <utility>
+ 
++#ifdef __EMSCRIPTEN__
++#include <emscripten.h>
++#endif
++
+ #include <GLFW/glfw3.h>
+ #include <IconsFontAwesome6.h>
+ #include <imgui.h>
+@@ -180,7 +184,7 @@
+ static void UpdateFontScale() {
+   // Scale based on OS window content scaling
+   float windowScale = 1.0;
+-#ifndef __APPLE__
++#if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
+   glfwGetWindowContentScale(gContext->window, &windowScale, nullptr);
+ #endif
+   // map to closest font size: 0 = 0.5x, 1 = 0.75x, 2 = 1.0x, 3 = 1.25x,
+@@ -316,7 +320,7 @@
+   }
+ 
+   if (!gContext->loadedWidthHeight) {
+-#ifndef __APPLE__
++#if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
+     if (windowScale == 1.0) {
+       glfwGetWindowContentScale(gContext->window, &windowScale, nullptr);
+     }
+@@ -392,31 +396,39 @@
+   return true;
+ }
+ 
++static void MainLoopIteration() {
++  // Poll and handle events (inputs, window resize, etc.)
++  glfwPollEvents();
++  gContext->isPlatformRendering = true;
++  UpdateFontScale();
++  if (gContext->reloadFonts) {
++    ReloadFonts();
++    // PlatformRenderFrame() will clear reloadFonts flag
++  }
++  PlatformRenderFrame();
++  gContext->isPlatformRendering = false;
++
++  auto& io = ImGui::GetIO();
++
++  // custom saving
++  if (gContext->saveSettings) {
++    if (io.WantSaveIniSettings) {
++      gContext->saveSettings(false);
++      io.WantSaveIniSettings = false;  // reset flag
++    }
++  }
++}
++
+ void gui::Main() {
++#ifdef __EMSCRIPTEN__
++  // The browser owns the loop. This does not return.
++  emscripten_set_main_loop(MainLoopIteration, 0, true);
++#else
+   // Main loop
+   while (!glfwWindowShouldClose(gContext->window) && !gContext->exit) {
+     double startTime = glfwGetTime();
+ 
+-    // Poll and handle events (inputs, window resize, etc.)
+-    glfwPollEvents();
+-    gContext->isPlatformRendering = true;
+-    UpdateFontScale();
+-    if (gContext->reloadFonts) {
+-      ReloadFonts();
+-      // PlatformRenderFrame() will clear reloadFonts flag
+-    }
+-    PlatformRenderFrame();
+-    gContext->isPlatformRendering = false;
+-
+-    auto& io = ImGui::GetIO();
+-
+-    // custom saving
+-    if (gContext->saveSettings) {
+-      if (io.WantSaveIniSettings) {
+-        gContext->saveSettings(false);
+-        io.WantSaveIniSettings = false;  // reset flag
+-      }
+-    }
++    MainLoopIteration();
+ 
+     // if FPS limiting, sleep until next frame time
+     if (gContext->fps != 0) {
+@@ -427,6 +439,7 @@
+       }
+     }
+   }
++#endif
+ 
+   // Save (if custom save)
+   if (gContext->saveSettings) {

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>@TITLE@</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="@RUNTIME@nt4-socket-shim.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1a1a; }
+  canvas { display: block; outline: none; }
+</style>
+</head>
+<body>
+<canvas id="canvas" tabindex="1"></canvas>
+<script>
+  var Module = {
+    settingsDir: '@SETTINGS_DIR@',
+    arguments: @ARGUMENTS@,
+    // stderr carries GLFW notices about features a browser does not have.
+    printErr: (text) => console.warn(text),
+  };
+</script>
+{{{ SCRIPT }}}
+</body>
+</html>

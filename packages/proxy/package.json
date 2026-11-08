@@ -1,0 +1,10 @@
+{
+  "name": "@frc-dev-wasm/proxy",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test/proxy.mjs",
+    "deploy": "pnpm dlx wrangler@4 deploy"
+  }
+}

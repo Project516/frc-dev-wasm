@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simulation GUI</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+      import { findSimHost, mountSimGui } from '@frc-dev-wasm/sim-gui'
+
+      const root = document.getElementById('root')
+      const host = findSimHost()
+      if (host) {
+        mountSimGui(root, host)
+      } else {
+        root.innerHTML = '<p class="no-host">The Simulation GUI runs inside the IDE. Open it from the WPILib commands.</p>'
+      }
+    </script>
+  </body>
+</html>

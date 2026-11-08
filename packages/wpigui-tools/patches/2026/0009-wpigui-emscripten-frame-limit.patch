@@ -1,0 +1,30 @@
+--- a/wpigui/src/main/native/cpp/wpigui.cpp
++++ b/wpigui/src/main/native/cpp/wpigui.cpp
+@@ -396,7 +396,27 @@
+   return true;
+ }
+ 
++#ifdef __EMSCRIPTEN__
++// Set by the app, see wpigui_emscripten.cpp.
++extern double wpiguiMinFrameMs;
++extern double wpiguiIdleFrameMs;
++extern "C" double wpiguiLastInputMs();
++#endif
++
+ static void MainLoopIteration() {
++#ifdef __EMSCRIPTEN__
++  // Another page can share this thread, so an app can ask for fewer frames,
++  // and fewer still while nobody uses the app.
++  static double lastFrame = 0;
++  double now = emscripten_get_now();
++  double minMs = now - wpiguiLastInputMs() < 1000 || wpiguiIdleFrameMs < wpiguiMinFrameMs
++                     ? wpiguiMinFrameMs
++                     : wpiguiIdleFrameMs;
++  if (now - lastFrame < minMs) {
++    return;
++  }
++  lastFrame = now;
++#endif
+   // Poll and handle events (inputs, window resize, etc.)
+   glfwPollEvents();
+   gContext->isPlatformRendering = true;

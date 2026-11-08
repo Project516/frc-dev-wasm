@@ -1,0 +1,82 @@
+{
+ "sha": "f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a",
+ "node_id": "C_kwDOC8ppZdoAKGY1NDhlNTdlNTQ0ZTFmZjVhNGM0NmJmMWUxYjg2ODVmOGU0YTM0OGE",
+ "commit": {
+  "author": {
+   "name": "Aiqiao Yan",
+   "email": "55104035+aiqiaoy@users.noreply.github.com",
+   "date": "2026-07-20T16:20:47Z"
+  },
+  "committer": {
+   "name": "GitHub",
+   "email": "noreply@github.com",
+   "date": "2026-07-20T16:20:47Z"
+  },
+  "message": "Consolidate dependency updates in CHANGELOG (#2537)\n\n* Consolidate dependency updates in CHANGELOG\n\nRemoved specific dependency updates and consolidated them into a single entry.\n\n* Fix capitalization in v7.0.1 changelog entries\n\nUpdated changelog entries for v7.0.1 to use consistent capitalization.",
+  "tree": {
+   "sha": "a5f6513df313ae8fa975ea4554fae589ee6390c7",
+   "url": "https://api.github.com/repos/actions/checkout/git/trees/a5f6513df313ae8fa975ea4554fae589ee6390c7"
+  },
+  "url": "https://api.github.com/repos/actions/checkout/git/commits/f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a",
+  "comment_count": 6,
+  "verification": {
+   "verified": true,
+   "reason": "valid",
+   "signature": "-----BEGIN PGP SIGNATURE-----\n\nwsFcBAABCAAQBQJqXkrgCRC1aQ7uu5UhlAAADXQQAGMpi2m1y5OnVFsgrD2HB/1x\ncHfzmHs/vuBWBQ1dDzCFE6hifu/c8eXSoFCNAsW+YQ3JzbfteuEmRlk4Z7HdTFCo\n8JRF0S8M89DBb090l4iaIhkCsPUWxdWn1FPE9xQc/N+oFQQNqHaGPvydYaXW+7OK\nO9axXmQm7TrqZL7tHOr2/+XloeLZ0vuOw/ZFTCoGYYt+jAa0CEmjKMuKVt7GfxXG\nmGozpRTWzT06y0N8g0VZewU4JA82MF6MVW/f+ZOVJiV5SZIWIXlC+rQIh9CQnLk8\nCeifyfqLwoqFX3isyt+/OqUtnZijB5GLanlnHEkSsj8OerKdTbQqypVr2xaxKB6I\nPYrZE9zPV60jDQPm6/CoWVmoOuj8lTZObj7Yw7jeqKHj8E15LaO6Rd4eiVBiJ4cH\nAJcXhYcAwUX55aEl/2ZZU75uKNaZsiWBX3naNDGRD6xvBfr1CirTY9Ii9kkIBL4x\nhMWk/jEqdESpWP6YVPoDPr2NNWrHXKNV7gqEqdkJyGR9aG0rqg33xE0KQkKCWE0g\nRhd0pIYMyl/M6A6AovRlz+gAcQQim3+UnlgA90SdmU9dLLeIigfXIbpjy2We41Cy\nlCN6mgbFt9p6tdPI9DgMFrWet2p/CLCsfMtTUlE2GZUsSUE4ffDr+OC15s9PGgQF\niEpr4qsttJeTqnBFMleT\n=yAfI\n-----END PGP SIGNATURE-----\n",
+   "payload": "tree a5f6513df313ae8fa975ea4554fae589ee6390c7\nparent 3d3c42e5aac5ba805825da76410c181273ba90b1\nauthor Aiqiao Yan <55104035+aiqiaoy@users.noreply.github.com> 1784564447 -0400\ncommitter GitHub <noreply@github.com> 1784564447 -0400\n\nConsolidate dependency updates in CHANGELOG (#2537)\n\n* Consolidate dependency updates in CHANGELOG\n\nRemoved specific dependency updates and consolidated them into a single entry.\n\n* Fix capitalization in v7.0.1 changelog entries\n\nUpdated changelog entries for v7.0.1 to use consistent capitalization.",
+   "verified_at": "2026-07-20T16:20:48Z"
+  }
+ },
+ "url": "https://api.github.com/repos/actions/checkout/commits/f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a",
+ "html_url": "https://github.com/actions/checkout/commit/f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a",
+ "comments_url": "https://api.github.com/repos/actions/checkout/commits/f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a/comments",
+ "author": {
+  "login": "aiqiaoy",
+  "id": 55104035,
+  "node_id": "MDQ6VXNlcjU1MTA0MDM1",
+  "avatar_url": "https://avatars.githubusercontent.com/u/55104035?v=4",
+  "gravatar_id": "",
+  "url": "https://api.github.com/users/aiqiaoy",
+  "html_url": "https://github.com/aiqiaoy",
+  "followers_url": "https://api.github.com/users/aiqiaoy/followers",
+  "following_url": "https://api.github.com/users/aiqiaoy/following{/other_user}",
+  "gists_url": "https://api.github.com/users/aiqiaoy/gists{/gist_id}",
+  "starred_url": "https://api.github.com/users/aiqiaoy/starred{/owner}{/repo}",
+  "subscriptions_url": "https://api.github.com/users/aiqiaoy/subscriptions",
+  "organizations_url": "https://api.github.com/users/aiqiaoy/orgs",
+  "repos_url": "https://api.github.com/users/aiqiaoy/repos",
+  "events_url": "https://api.github.com/users/aiqiaoy/events{/privacy}",
+  "received_events_url": "https://api.github.com/users/aiqiaoy/received_events",
+  "type": "User",
+  "user_view_type": "public",
+  "site_admin": true
+ },
+ "committer": {
+  "login": "web-flow",
+  "id": 19864447,
+  "node_id": "MDQ6VXNlcjE5ODY0NDQ3",
+  "avatar_url": "https://avatars.githubusercontent.com/u/19864447?v=4",
+  "gravatar_id": "",
+  "url": "https://api.github.com/users/web-flow",
+  "html_url": "https://github.com/web-flow",
+  "followers_url": "https://api.github.com/users/web-flow/followers",
+  "following_url": "https://api.github.com/users/web-flow/following{/other_user}",
+  "gists_url": "https://api.github.com/users/web-flow/gists{/gist_id}",
+  "starred_url": "https://api.github.com/users/web-flow/starred{/owner}{/repo}",
+  "subscriptions_url": "https://api.github.com/users/web-flow/subscriptions",
+  "organizations_url": "https://api.github.com/users/web-flow/orgs",
+  "repos_url": "https://api.github.com/users/web-flow/repos",
+  "events_url": "https://api.github.com/users/web-flow/events{/privacy}",
+  "received_events_url": "https://api.github.com/users/web-flow/received_events",
+  "type": "User",
+  "user_view_type": "public",
+  "site_admin": false
+ },
+ "parents": [
+  {
+   "sha": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+   "url": "https://api.github.com/repos/actions/checkout/commits/3d3c42e5aac5ba805825da76410c181273ba90b1",
+   "html_url": "https://github.com/actions/checkout/commit/3d3c42e5aac5ba805825da76410c181273ba90b1"
+  }
+ ]
+}

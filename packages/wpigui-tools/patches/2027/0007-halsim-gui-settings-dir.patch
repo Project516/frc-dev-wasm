@@ -1,0 +1,22 @@
+--- a/simulation/halsim_gui/src/main/native/cpp/main.cpp
++++ b/simulation/halsim_gui/src/main/native/cpp/main.cpp
+@@ -5,6 +5,7 @@
+ #include "wpi/hal/Main.h"
+ 
+ #include <cstdio>
++#include <cstdlib>
+ #include <memory>
+ #include <string>
+ #include <string_view>
+@@ -92,6 +93,11 @@
+   wpi::glass::CreateContext();
+ 
+   wpi::glass::SetStorageName("simgui");
++#ifdef __EMSCRIPTEN__
++  // The page chooses it, see shell/simgui.js.
++  const char* settingsDir = std::getenv("SIMGUI_DIR");
++  wpi::glass::SetStorageDir(settingsDir ? settingsDir : "/settings/simgui");
++#endif
+ #ifdef RUNNING_IMGUI_TESTS
+   wpi::glass::SetStorageDir(gTestStorageDir);
+   wpi::gui::test::InstallTestEngineHooks();

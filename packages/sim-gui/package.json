@@ -1,0 +1,26 @@
+{
+  "name": "@frc-dev-wasm/sim-gui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "scripts": {
+    "dev": "vite --config vite.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node test/run.mjs",
+    "test:protocol": "node test/protocol.mjs"
+  },
+  "dependencies": {
+    "@preact/signals": "^2.11.4",
+    "fflate": "^0.8.3",
+    "preact": "^11.2.0"
+  },
+  "devDependencies": {
+    "@frc-dev-wasm/runtime": "workspace:*",
+    "playwright-core": "1.65.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.6"
+  }
+}

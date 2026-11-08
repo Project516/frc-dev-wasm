@@ -1,0 +1,10 @@
+{
+  "name": "frc-dev-wasm-proxy",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-01",
+  // Comma-separated addresses of the IDE. http://localhost is always allowed.
+  "vars": { "ALLOWED_ORIGINS": "https://project516.dev" },
+  "routes": [{ "pattern": "frc-proxy.project516.dev", "custom_domain": true }],
+  "workers_dev": false,
+  "observability": { "enabled": false }
+}

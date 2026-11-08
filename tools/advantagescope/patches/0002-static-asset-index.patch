@@ -1,0 +1,18 @@
+Read the asset index from assets/index.json and build asset URLs from the page directory.
+A static host cannot serve both a file named assets and a directory assets/,
+and the page URL ends in index.html.
+
+--- a/src/main/lite/assetLoader.ts
++++ b/src/main/lite/assetLoader.ts
+@@ -19,9 +19,9 @@
+   };
+ 
+   // Request asset index
+-  let response = await fetch("assets");
++  let response = await fetch("assets/index.json");
+   let assetIndex = await response.json();
+-  let currentPath = window.location.pathname;
++  let currentPath = window.location.pathname.replace(/[^/]*$/, "");
+ 
+   // Filter and sort index
+   let configPaths = Object.keys(assetIndex)

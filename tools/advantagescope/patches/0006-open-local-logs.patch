@@ -1,0 +1,84 @@
+Open log files from the local disk, by file picker or drag and drop.
+Lite only lists logs a server provides, and its drop handler needs Electron.
+
+--- a/src/main/lite/main.ts
++++ b/src/main/lite/main.ts
+@@ -45,6 +45,24 @@
+ let assetsPromise: Promise<AdvantageScopeAssets>;
+ let downloadInterval: number | null = null;
+ let popupRequiresForceClose = false;
++const localFiles = new Map<string, File>();
++
++/** Opens log files chosen or dropped by the user. */
++function openLocalFiles(files: File[]) {
++  if (files.length === 0) return;
++  files.forEach((file) => localFiles.set(file.name, file));
++  sendMessage(hubPort, "open-files", { files: files.map((file) => file.name), merge: false });
++}
++
++/** Shows a file picker for local logs. */
++function pickLocalFiles() {
++  const input = document.createElement("input");
++  input.type = "file";
++  input.multiple = true;
++  input.accept = ".wpilog,.rlog,.dslog,.dsevents,.csv,.log";
++  input.onchange = () => openLocalFiles(Array.from(input.files ?? []));
++  input.click();
++}
+ 
+ /**
+  * Open a new popup menu
+@@ -299,6 +317,10 @@
+       window.alert(message.data.content);
+       break;
+ 
++    case "open-local-files":
++      openLocalFiles(message.data);
++      break;
++
+     case "save-state":
+       localStorage.setItem(LocalStorageKeys.STATE, JSON.stringify(message.data));
+       break;
+@@ -333,8 +355,14 @@
+         let prefsRaw = localStorage.getItem(LocalStorageKeys.PREFS);
+         if (prefsRaw !== null) mergePreferences(prefs, JSON.parse(prefsRaw));
+ 
+-        let response = await fetch(`logs/${encodeURIComponent(path)}?folder=${encodeURIComponent(prefs.remotePath)}`);
+-        let buffer = await response.arrayBuffer();
++        const localFile = localFiles.get(path);
++        let buffer: ArrayBuffer;
++        if (localFile !== undefined) {
++          buffer = await localFile.arrayBuffer();
++        } else {
++          let response = await fetch(`logs/${encodeURIComponent(path)}?folder=${encodeURIComponent(prefs.remotePath)}`);
++          buffer = await response.arrayBuffer();
++        }
+         let array = new Uint8Array(buffer);
+ 
+         sendMessage(hubPort, "historical-data", {
+@@ -432,6 +460,12 @@
+                 content: `Open Log (\u21e7 ${modifier} O)`,
+                 callback() {
+                   openDownload();
++                }
++              },
++              {
++                content: "Open Local Log",
++                callback() {
++                  pickLocalFiles();
+                 }
+               },
+               {
+--- a/src/hub/hub.ts
++++ b/src/hub/hub.ts
+@@ -498,7 +498,9 @@
+   event.preventDefault();
+   event.stopPropagation();
+ 
+-  if (event.dataTransfer) {
++  if (event.dataTransfer && window.platform === "lite") {
++    window.sendMainMessage("open-local-files", Array.from(event.dataTransfer.files));
++  } else if (event.dataTransfer) {
+     let files: string[] = [];
+     for (const file of event.dataTransfer.files) {
+       files.push(window.electron.getFilePath(file));

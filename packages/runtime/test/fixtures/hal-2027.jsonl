@@ -1,0 +1,17 @@
+{"type":"PWM","device":"3","data":{"<init":true,"<raw":0,"<output_period":0}}
+{"type":"PWM","device":"3","data":{"<raw":1750,"<output_period":1}}
+{"type":"Encoder","device":"0","data":{"<init":true,">count":12,">rate":3.5,"<reverse_direction":false,"<channel_a":6,"<channel_b":7}}
+{"type":"AI","device":"1","data":{"<init":true,">voltage":0.0}}
+{"type":"AI","device":"1","data":{">voltage":2.5}}
+{"type":"AddressableLED","device":"0","data":{"<init":true,"<start":0,"<length":3,"<data":[{"r":255,"g":0,"b":0},{"r":0,"g":255,"b":0},{"r":10,"g":20,"b":30}]}}
+{"type":"RoboRIO","device":"","data":{">vin_voltage":11.8}}
+{"type":"DriverStation","device":"","data":{">ds":true,">robotMode":2,">enabled":true,">new_data":true}}
+{"type":"Joystick","device":"0","data":{">axes":[0.0,-0.5,0.0],">povs":[3],">buttons":[true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false],"<leds":0,"<rumble_left":0,"<rumble_right":0}}
+{"type":"Joystick","device":"1","data":{">axes":[],">povs":[],">buttons":[],"<leds":0,"<rumble_left":0,"<rumble_right":0}}
+{"type":"Joystick","device":"2","data":{">axes":[],">povs":[],">buttons":[],"<leds":0,"<rumble_left":0,"<rumble_right":0}}
+{"type":"Joystick","device":"3","data":{">axes":[],">povs":[],">buttons":[],"<leds":0,"<rumble_left":0,"<rumble_right":0}}
+{"type":"Joystick","device":"4","data":{">axes":[],">povs":[],">buttons":[],"<leds":0,"<rumble_left":0,"<rumble_right":0}}
+{"type":"Joystick","device":"5","data":{">axes":[],">povs":[],">buttons":[],"<leds":0,"<rumble_left":0,"<rumble_right":0}}
+{"type":"Joystick","device":"0","data":{"<rumble_left":65535,"<leds":16711808}}
+{"type":"DriverStation","device":"","data":{">robotMode":1}}
+{"type":"PWM","device":"3","data":{"<raw":0,"<init":false}}

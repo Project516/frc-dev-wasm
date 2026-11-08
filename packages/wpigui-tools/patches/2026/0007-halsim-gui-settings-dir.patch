@@ -1,0 +1,22 @@
+--- a/simulation/halsim_gui/src/main/native/cpp/main.cpp
++++ b/simulation/halsim_gui/src/main/native/cpp/main.cpp
+@@ -3,6 +3,7 @@
+ // the WPILib BSD license file in the root directory of this project.
+ 
+ #include <cstdio>
++#include <cstdlib>
+ #include <memory>
+ #include <string_view>
+ 
+@@ -52,6 +53,11 @@
+   glass::CreateContext();
+ 
+   glass::SetStorageName("simgui");
++#ifdef __EMSCRIPTEN__
++  // The page chooses it, see shell/simgui.js.
++  const char* settingsDir = std::getenv("SIMGUI_DIR");
++  glass::SetStorageDir(settingsDir ? settingsDir : "/settings/simgui");
++#endif
+ 
+   gui::AddInit([] { ImGui::GetIO().ConfigDockingWithShift = true; });
+ 

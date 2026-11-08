@@ -1,0 +1,113 @@
+--- a/glass/src/libnt/native/cpp/NetworkTablesSettings.cpp
++++ b/glass/src/libnt/native/cpp/NetworkTablesSettings.cpp
+@@ -19,6 +19,15 @@
+ 
+ using namespace wpi::glass;
+ 
++#ifdef __EMSCRIPTEN__
++// No robot to discover in a browser: default to the simulation.
++static constexpr int kDefaultMode = 1;
++static constexpr const char* kDefaultServer = "localhost";
++#else
++static constexpr int kDefaultMode = 0;
++static constexpr const char* kDefaultServer = "";
++#endif
++
+ void NetworkTablesSettings::Thread::Main() {
+   while (m_active) {
+     // wait to be woken up
+@@ -28,6 +37,13 @@ void NetworkTablesSettings::Thread::Main() {
+       break;
+     }
+ 
++    Apply(lock);
++  }
++}
++
++void NetworkTablesSettings::Thread::Apply(
++    std::unique_lock<wpi::util::mutex>& lock) {
++  {
+     // clear restart flag
+     m_restart = false;
+     bool reconnect = std::exchange(m_reconnect, false);
+@@ -92,17 +108,23 @@ void NetworkTablesSettings::Thread::Main() {
+ 
+ NetworkTablesSettings::NetworkTablesSettings(std::string_view clientName,
+                                              Storage& storage, NT_Inst inst)
+-    : m_mode{storage.GetString("mode"), 0, {"Disabled", "Client", "Server"}},
++    : m_mode{storage.GetString("mode"),
++             kDefaultMode,
++             {"Disabled", "Client", "Server"}},
+       m_persistentFilename{
+           storage.GetString("persistentFilename", "networktables.json")},
+-      m_serverTeam{storage.GetString("serverTeam")},
++      m_serverTeam{storage.GetString("serverTeam", kDefaultServer)},
+       m_listenAddress{storage.GetString("listenAddress")},
+       m_clientName{storage.GetString("clientName", clientName)},
+       m_port{storage.GetInt("port", NT_DEFAULT_PORT)},
+       m_dsClient{storage.GetBool("dsClient", true)},
+       m_requireTeamNumberMatch{
+           storage.GetBool("requireTeamNumberMatch", false)} {
++#ifdef __EMSCRIPTEN__
++  m_syncThread = std::make_unique<Thread>(inst);
++#else
+   m_thread.Start(inst);
++#endif
+ }
+ 
+ void NetworkTablesSettings::Update() {
+@@ -112,7 +134,13 @@ void NetworkTablesSettings::Update() {
+   m_restart = false;
+ 
+   // do actual operation on thread
++#ifdef __EMSCRIPTEN__
++  // No threads in the browser: apply the settings right here.
++  auto* thr = m_syncThread.get();
++  std::unique_lock lock{thr->m_mutex};
++#else
+   auto thr = m_thread.GetThread();
++#endif
+   thr->m_restart = true;
+   thr->m_reconnect |= std::exchange(m_reconnect, false);
+   thr->m_mode = m_mode.GetValue();
+@@ -123,7 +151,11 @@ void NetworkTablesSettings::Update() {
+   thr->m_port = m_port;
+   thr->m_dsClient = m_dsClient;
+   thr->m_requireTeamNumberMatch = m_requireTeamNumberMatch;
++#ifdef __EMSCRIPTEN__
++  thr->Apply(lock);
++#else
+   thr->m_cond.notify_one();
++#endif
+ }
+ 
+ static void LimitPortRange(int* port) {
+--- a/glass/src/libnt/native/include/wpi/glass/networktables/NetworkTablesSettings.hpp
++++ b/glass/src/libnt/native/include/wpi/glass/networktables/NetworkTablesSettings.hpp
+@@ -4,6 +4,8 @@
+ 
+ #pragma once
+ 
++#include <memory>
++#include <mutex>
+ #include <string>
+ 
+ #include "wpi/glass/support/EnumSetting.hpp"
+@@ -50,6 +52,7 @@ class NetworkTablesSettings {
+     explicit Thread(NT_Inst inst) : m_inst{inst} {}
+ 
+     void Main() override;
++    void Apply(std::unique_lock<wpi::util::mutex>& lock);
+ 
+     NT_Inst m_inst;
+     bool m_restart = false;
+@@ -64,6 +67,9 @@ class NetworkTablesSettings {
+     bool m_requireTeamNumberMatch;
+   };
+   wpi::util::SafeThreadOwner<Thread> m_thread;
++#ifdef __EMSCRIPTEN__
++  std::unique_ptr<Thread> m_syncThread;
++#endif
+ };
+ 
+ }  // namespace wpi::glass

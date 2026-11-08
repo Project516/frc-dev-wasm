@@ -1,0 +1,23 @@
+Fetch the youtube-dl-exec dependency over https.
+The lockfile pins an ssh URL, which fails without ssh keys.
+
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -6308,7 +6308,7 @@
+     },
+     "node_modules/heatmap.js": {
+       "version": "2.0.5",
+-      "resolved": "git+ssh://git@github.com/jwbonner/heatmap.js.git#24b4455c95f5e54cb50ab8bb06f9229d30426362",
++      "resolved": "git+https://github.com/jwbonner/heatmap.js.git#24b4455c95f5e54cb50ab8bb06f9229d30426362",
+       "integrity": "sha512-xbrBBYPAnu1hC/W3Jzh7FfMW56i1+dAthHi3KJcBU6Q71KnRrkonbiC7+qgz3wX9QLmu4tn0cIzJNFBy6HtAoA==",
+       "dev": true
+     },
+@@ -10428,7 +10428,7 @@
+     },
+     "node_modules/youtube-dl-exec": {
+       "version": "3.0.28",
+-      "resolved": "git+ssh://git@github.com/jwbonner/youtube-dl-exec.git#708fe6410c4c9fa22cf09ab424b15546b178bdbe",
++      "resolved": "git+https://github.com/jwbonner/youtube-dl-exec.git#708fe6410c4c9fa22cf09ab424b15546b178bdbe",
+       "integrity": "sha512-NUnrbJUun/ikPshAaIh9tpr0ZTKToDYC+wcir6itp513eUXUWFIXWYrVfFblTGuTmXylI4czYppkEa+GYMZIcA==",
+       "hasInstallScript": true,
+       "license": "MIT",

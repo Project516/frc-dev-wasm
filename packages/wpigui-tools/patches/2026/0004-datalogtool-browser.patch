@@ -1,0 +1,109 @@
+--- a/datalogtool/src/main/native/cpp/App.cpp
++++ b/datalogtool/src/main/native/cpp/App.cpp
+@@ -12,11 +12,9 @@
+ #include <glass/Storage.h>
+ #include <imgui.h>
+ #include <imgui_internal.h>
+-#include <libssh/libssh.h>
+ #include <wpigui.h>
+ #include <wpigui_openurl.h>
+ 
+-#include "Downloader.h"
+ #include "Exporter.h"
+ 
+ namespace gui = wpi::gui;
+@@ -35,8 +33,6 @@
+ 
+ bool gShutdown = false;
+ 
+-static std::unique_ptr<Downloader> gDownloader;
+-static bool* gDownloadVisible;
+ static float gDefaultScale = 1.0;
+ 
+ void SetNextWindowPos(const ImVec2& pos, ImGuiCond cond, const ImVec2& pivot) {
+@@ -55,22 +51,6 @@
+   }
+ }
+ 
+-static void DisplayDownload() {
+-  if (!*gDownloadVisible) {
+-    return;
+-  }
+-  SetNextWindowPos(ImVec2{0, 250}, ImGuiCond_FirstUseEver);
+-  SetNextWindowSize(ImVec2{375, 260}, ImGuiCond_FirstUseEver);
+-  if (ImGui::Begin("Download", gDownloadVisible)) {
+-    if (!gDownloader) {
+-      gDownloader = std::make_unique<Downloader>(
+-          glass::GetStorageRoot().GetChild("download"));
+-    }
+-    gDownloader->Display();
+-  }
+-  ImGui::End();
+-}
+-
+ static void DisplayMainMenu() {
+   ImGui::BeginMainMenuBar();
+ 
+@@ -78,11 +58,6 @@
+   mainMenu.WorkspaceMenu();
+   gui::EmitViewMenu();
+ 
+-  if (ImGui::BeginMenu("Window")) {
+-    ImGui::MenuItem("Download", nullptr, gDownloadVisible);
+-    ImGui::EndMenu();
+-  }
+-
+   bool about = false;
+   if (ImGui::BeginMenu("Info")) {
+     if (ImGui::MenuItem("About")) {
+@@ -125,12 +100,9 @@
+   DisplayInputFiles();
+   DisplayEntries();
+   DisplayOutput(glass::GetStorageRoot().GetChild("output"));
+-  DisplayDownload();
+ }
+ 
+ void Application(std::string_view saveDir) {
+-  ssh_init();
+-
+   gui::CreateContext();
+   glass::CreateContext();
+ 
+@@ -151,15 +123,10 @@
+   gui::AddLateExecute(DisplayGui);
+   gui::Initialize("Datalog Tool", 925, 510);
+ 
+-  gDownloadVisible =
+-      &glass::GetStorageRoot().GetChild("download").GetBool("visible", true);
+-
+   gui::Main();
+ 
+   gShutdown = true;
+   glass::DestroyContext();
+   gui::DestroyContext();
+ 
+-  gDownloader.reset();
+-  ssh_finalize();
+ }
+--- a/datalogtool/src/main/native/cpp/Exporter.cpp
++++ b/datalogtool/src/main/native/cpp/Exporter.cpp
+@@ -602,7 +602,7 @@
+       std::error_code ec;
+       auto of = fs::OpenFileForWrite(
+           outPath / fs::path{f.first}.replace_extension("csv"), ec,
+-          fs::CD_CreateNew, fs::OF_Text);
++          fs::CD_CreateAlways, fs::OF_Text);
+       if (ec) {
+         std::scoped_lock lock{gExportMutex};
+         gExportErrors.emplace_back(
+@@ -643,7 +643,9 @@
+          gExportCount == static_cast<int>(gInputFiles.size()))) {
+       gExportCount = 0;
+       gExportErrors.clear();
+-      exporter = std::async(std::launch::async, ExportCsv, outputFolder, style);
++      // No threads in the browser: deferred runs the export in wait().
++      exporter = std::async(std::launch::deferred, ExportCsv, outputFolder, style);
++      exporter.wait();
+     }
+     if (exporter.valid()) {
+       ImGui::SameLine();

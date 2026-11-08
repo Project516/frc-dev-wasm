@@ -1,0 +1,12 @@
+--- a/ntcore/src/main/native/cpp/InstanceImpl.hpp
++++ b/ntcore/src/main/native/cpp/InstanceImpl.hpp
+@@ -18,8 +18,7 @@
+ #include "LocalStorage.hpp"
+ #include "Log.hpp"
+ #include "LoggerImpl.hpp"
+-#include "NetworkClient.hpp"
+-#include "NetworkServer.hpp"
++#include "WasmNetwork.hpp"
+ #include "wpi/util/mutex.hpp"
+ 
+ namespace wpi::nt {

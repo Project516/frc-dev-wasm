@@ -1,0 +1,12 @@
+--- a/ntcore/src/main/native/cpp/InstanceImpl.h
++++ b/ntcore/src/main/native/cpp/InstanceImpl.h
+@@ -20,8 +20,7 @@
+ #include "LocalStorage.h"
+ #include "Log.h"
+ #include "LoggerImpl.h"
+-#include "NetworkClient.h"
+-#include "NetworkServer.h"
++#include "WasmNetwork.h"
+ 
+ namespace nt {
+ 

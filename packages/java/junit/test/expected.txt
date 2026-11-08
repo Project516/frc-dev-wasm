@@ -1,0 +1,52 @@
+
+BrokenSetupTest > initializationError FAILED
+    java.lang.IllegalStateException at BrokenSetupTest.java:6
+        setup broke
+
+PlainTest > ok() PASSED
+
+BasicTest > assumption() SKIPPED
+
+BasicTest > passes() PASSED
+
+BasicTest > prints() STANDARD_OUT
+    hello out
+    second line
+
+BasicTest > prints() STANDARD_ERROR
+    hello err
+
+BasicTest > prints() PASSED
+
+BasicTest > throwsIllegal() FAILED
+    java.lang.IllegalStateException at BasicTest.java:27
+        boom
+
+BasicTest > parameterized(int) > [1] 1 PASSED
+
+BasicTest > parameterized(int) > [2] 2 FAILED
+    org.opentest4j.AssertionFailedError at BasicTest.java:58
+        expected: <true> but was: <false>
+
+BasicTest > fails() FAILED
+    org.opentest4j.AssertionFailedError at BasicTest.java:18
+        math is hard ==> expected: <3> but was: <2>
+
+BasicTest > has a display name PASSED
+
+BasicTest > withCause() FAILED
+    java.lang.RuntimeException at BasicTest.java:52
+        outer
+        Caused by: java.lang.IllegalArgumentException at BasicTest.java:52
+            inner
+
+BasicTest > skipped() SKIPPED
+
+BasicTest > Inner > nestedFails() FAILED
+    org.opentest4j.AssertionFailedError at BasicTest.java:68
+        nested
+
+BasicTest > Inner > nestedPasses() PASSED
+
+14 tests completed, 6 failed, 2 skipped
+

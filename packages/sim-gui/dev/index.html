@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sim GUI dev shell</title>
+    <style id="theme"></style>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      .monaco-workbench {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        background: var(--vscode-editor-background);
+        color: var(--vscode-foreground);
+        font: 13px var(--vscode-font-family);
+      }
+      .bar {
+        display: flex;
+        gap: 8px;
+        padding: 4px 8px;
+        background: var(--vscode-titleBar-activeBackground, #181818);
+      }
+      iframe {
+        flex: 1;
+        border: 0;
+      }
+    </style>
+  </head>
+  <body class="monaco-workbench vs-dark">
+    <div class="bar">
+      <button id="start">Start robot</button>
+      <button id="stop">Stop robot</button>
+      <button id="dark">Dark</button>
+      <button id="light">Light</button>
+    </div>
+    <iframe id="sim" title="Simulation GUI" src="./sim.html"></iframe>
+    <script type="module" src="./shell.ts"></script>
+  </body>
+</html>

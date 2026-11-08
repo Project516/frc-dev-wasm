@@ -1,0 +1,27 @@
+Do not navigate away when a beta build has expired.
+The redirect targets the Systemcore home page on the current hostname.
+
+--- a/src/main/lite/main.ts
++++ b/src/main/lite/main.ts
+@@ -1301,16 +1301,11 @@
+   // Beta init
+   if (isBeta()) {
+     if (isBetaExpired()) {
+-      if (
+-        confirm(
+-          `The AdvantageScope Lite ${
+-            isAlpha() ? "alpha" : "beta"
+-          } is complete. Please follow the instructions in the documentation to update to the latest stable release.`
+-        )
+-      ) {
+-        // Redirect to Systemcore home page
+-        location.href = "http://" + location.hostname;
+-      }
++      alert(
++        `The AdvantageScope Lite ${
++          isAlpha() ? "alpha" : "beta"
++        } is complete. Please follow the instructions in the documentation to update to the latest stable release.`
++      );
+     } else if (!isBetaWelcomeComplete()) {
+       openPopupWindow(
+         "www/betaWelcome.html",

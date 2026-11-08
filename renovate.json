@@ -1,0 +1,41 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "prConcurrentLimit": 3,
+  "dependencyDashboard": true,
+  "semanticCommits": "enabled",
+  "packageRules": [
+    {
+      "description": "The VS Code workbench packages release together and must stay on one version",
+      "groupName": "VS Code workbench",
+      "matchPackageNames": ["@codingame/**", "monaco-editor", "vscode"]
+    },
+    {
+      "description": "Types for the oldest Node the project supports (engines >=26), so code cannot use newer APIs",
+      "matchPackageNames": ["@types/node"],
+      "allowedVersions": "<27"
+    },
+    {
+      "description": "A new Playwright needs the matching browser build",
+      "matchPackageNames": ["playwright-core"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "The bundled extensions keep the versions their upstream sources list",
+      "matchFileNames": ["packages/vscode-git/package.json", "packages/vscode-wpilib/package.json"],
+      "matchPackageNames": [
+        "@joaomoreno/unique-names-generator",
+        "@octokit/**",
+        "byline",
+        "file-type",
+        "picomatch",
+        "vscode-uri",
+        "@vscode-elements/elements",
+        "jsonc-parser",
+        "vscode-wpilibapi",
+        "xml2js"
+      ],
+      "enabled": false
+    }
+  ]
+}

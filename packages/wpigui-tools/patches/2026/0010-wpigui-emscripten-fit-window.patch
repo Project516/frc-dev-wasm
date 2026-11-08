@@ -1,0 +1,38 @@
+--- a/wpigui/src/main/native/cpp/wpigui.cpp
++++ b/wpigui/src/main/native/cpp/wpigui.cpp
+@@ -49,10 +49,12 @@
+ }
+ 
+ static void WindowSizeCallback(GLFWwindow* window, int width, int height) {
++#ifndef __EMSCRIPTEN__
+   if (!gContext->maximized) {
+     gContext->width = width;
+     gContext->height = height;
+   }
++#endif
+   if (!gContext->isPlatformRendering) {
+     PlatformRenderFrame();
+   }
+@@ -483,6 +485,9 @@
+ 
+ void gui::CommonRenderFrame() {
+   ImGui_ImplGlfw_NewFrame();
++#ifdef __EMSCRIPTEN__
++  PlatformFitDisplay();
++#endif
+ 
+   // Start the Dear ImGui frame
+   ImGui::NewFrame();
+--- a/wpigui/src/main/native/include/wpigui_internal.h
++++ b/wpigui/src/main/native/include/wpigui_internal.h
+@@ -86,6 +86,10 @@
+ void PlatformRenderFrame();
+ void PlatformShutdown();
+ void PlatformFramebufferSizeChanged(int width, int height);
++#ifdef __EMSCRIPTEN__
++// Fits the saved window size into the page, after the backend set the display size.
++void PlatformFitDisplay();
++#endif
+ 
+ void CommonRenderFrame();
+ 

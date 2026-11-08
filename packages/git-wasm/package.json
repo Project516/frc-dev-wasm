@@ -1,0 +1,13 @@
+{
+  "name": "@frc-dev-wasm/git-wasm",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test/start.mjs && node test/compare.mjs && node test/network.mjs"
+  },
+  "exports": {
+    "./host": "./src/host.mjs"
+  }
+}

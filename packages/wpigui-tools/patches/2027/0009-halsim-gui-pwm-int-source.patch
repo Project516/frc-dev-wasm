@@ -1,0 +1,12 @@
+--- a/simulation/halsim_gui/src/main/native/cpp/PWMSimGui.cpp
++++ b/simulation/halsim_gui/src/main/native/cpp/PWMSimGui.cpp
+@@ -17,7 +17,8 @@
+ using namespace halsimgui;
+ 
+ namespace {
+-HALSIMGUI_DATASOURCE_DOUBLE_INDEXED(PWMPulseMicrosecond, "PWM");
++// The pulse width is an integer value, which a double source ignores.
++HALSIMGUI_DATASOURCE_INDEXED(PWMPulseMicrosecond, "PWM", INT, Double, int);
+ 
+ class PWMSimModel : public wpi::glass::PWMModel {
+  public:

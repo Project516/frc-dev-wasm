@@ -1,0 +1,80 @@
+--- a/sysid/src/main/native/cpp/view/Analyzer.cpp
++++ b/sysid/src/main/native/cpp/view/Analyzer.cpp
+@@ -310,10 +310,11 @@
+ void Analyzer::PrepareRawGraphs() {
+   if (m_manager->HasData()) {
+     AbortDataPrep();
+-    m_dataThread = std::thread([&] {
++    // No threads in the browser: prepare the plots right here.
++    [&] {
+       m_plot.SetRawData(m_manager->GetOriginalData(), m_manager->GetUnit(),
+                         m_abortDataPrep);
+-    });
++    }();
+   }
+ }
+ 
+@@ -321,12 +322,12 @@
+   if (m_manager->HasData()) {
+     WPI_INFO(m_logger, "{}", "Graph state");
+     AbortDataPrep();
+-    m_dataThread = std::thread([&] {
++    [&] {
+       m_plot.SetData(m_manager->GetRawData(), m_manager->GetFilteredData(),
+                      m_manager->GetUnit(), m_feedforwardGains,
+                      m_manager->GetStartTimes(), m_manager->GetAnalysisType(),
+                      m_abortDataPrep);
+-    });
++    }();
+     UpdateFeedbackGains();
+     m_state = AnalyzerState::kNominalDisplay;
+   }
+--- a/sysid/src/main/native/cpp/view/DataSelector.cpp
++++ b/sysid/src/main/native/cpp/view/DataSelector.cpp
+@@ -5,6 +5,7 @@
+ #include "sysid/view/DataSelector.h"
+ 
+ #include <algorithm>
++#include <future>
+ #include <string>
+ #include <string_view>
+ #include <utility>
+@@ -23,6 +24,14 @@
+ 
+ using namespace sysid;
+ 
++// No threads in the browser: run the work now and hand back a ready future.
++template <typename F>
++static auto RunNow(F&& func) {
++  std::promise<decltype(func())> promise;
++  promise.set_value(func());
++  return promise.get_future();
++}
++
+ static constexpr const char* kAnalysisTypes[] = {"Elevator", "Arm", "Simple"};
+ 
+ static bool EmitEntryTarget(const char* name, bool isString,
+@@ -84,10 +93,9 @@
+   }
+ 
+   if (EmitEntryTarget("Test State", true, &m_testStateEntry)) {
+-    m_testsFuture =
+-        std::async(std::launch::async, [testStateEntry = m_testStateEntry] {
+-          return LoadTests(*testStateEntry);
+-        });
++    m_testsFuture = RunNow([testStateEntry = m_testStateEntry] {
++      return LoadTests(*testStateEntry);
++    });
+   }
+ 
+   if (!m_testStateEntry) {
+@@ -172,8 +180,7 @@
+   if (/*!m_selectedTest.empty() &&*/ m_velocityEntry && m_positionEntry &&
+       m_voltageEntry) {
+     if (ImGui::Button("Load")) {
+-      m_testdataFuture =
+-          std::async(std::launch::async, [this] { return BuildTestData(); });
++      m_testdataFuture = RunNow([this] { return BuildTestData(); });
+     }
+   }
+ }

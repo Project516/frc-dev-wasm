@@ -1,0 +1,35 @@
+{
+  "name": "frc-dev-wasm",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.18.0",
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "fetch-deps": "node scripts/fetch-deps.mjs",
+    "dev": "pnpm --filter @frc-dev-wasm/ide dev",
+    "build": "node packages/wpigui-tools/source.mjs apps/ide/public/runtime && pnpm --filter @frc-dev-wasm/ide build && git describe --always --dirty --abbrev=40 > apps/ide/dist/.commit",
+    "preview": "pnpm --filter @frc-dev-wasm/ide preview",
+    "build:advantagescope": "node scripts/build-advantagescope.mjs",
+    "build:terminal": "node scripts/build-terminal.mjs",
+    "build:git": "pnpm --filter @frc-dev-wasm/git-wasm build",
+    "build:vscode-git": "pnpm --filter @frc-dev-wasm/vscode-git build",
+    "build:vscode-wpilib": "pnpm --filter @frc-dev-wasm/vscode-wpilib build",
+    "build:java-web": "pnpm --filter @frc-dev-wasm/java-web build",
+    "build:java": "pnpm --filter @frc-dev-wasm/java build",
+    "build:all": "pnpm fetch-deps && pnpm build:java && pnpm build:advantagescope && pnpm build:terminal && pnpm build:git && pnpm build:vscode-git && pnpm build:vscode-wpilib && pnpm build:java-web && pnpm build:wpigui-tools && pnpm build",
+    "deploy:pages": "bash scripts/deploy-pages.sh",
+    "build:wpigui-tools": "pnpm --filter @frc-dev-wasm/wpigui-tools build",
+    "build:glass": "pnpm --filter @frc-dev-wasm/wpigui-tools build glass",
+    "build:outlineviewer": "pnpm --filter @frc-dev-wasm/wpigui-tools build outlineviewer",
+    "build:datalogtool": "pnpm --filter @frc-dev-wasm/wpigui-tools build datalogtool",
+    "build:sysid": "pnpm --filter @frc-dev-wasm/wpigui-tools build sysid",
+    "build:simgui": "pnpm --filter @frc-dev-wasm/wpigui-tools build simgui"
+  },
+  "devDependencies": {
+    "binaryen": "132.0.0",
+    "fflate": "^0.8.3"
+  }
+}

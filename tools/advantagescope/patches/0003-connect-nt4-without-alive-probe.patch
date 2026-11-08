@@ -1,0 +1,44 @@
+Open the NT4 socket directly instead of probing http://<address>:5810 first.
+The in-page NT4 server answers WebSocket connections only.
+
+--- a/src/hub/dataSources/nt4/NT4.ts
++++ b/src/hub/dataSources/nt4/NT4.ts
+@@ -172,26 +172,10 @@
+     }, this.RTT_PERIOD_MS_V41);
+   }
+ 
+-  private async connectOnAlive() {
++  private connectOnAlive() {
+     if (!this.serverConnectionRequested) return;
+-    let result: Response | null = null;
+-    let requestStart = new Date().getTime();
+-    try {
+-      result = await Promise.any(
+-        this.serverPorts.map((port) =>
+-          fetch("http://" + this.serverAddr + ":" + port.toString(), {
+-            signal: AbortSignal.timeout(250)
+-          })
+-        )
+-      );
+-    } catch (err) {}
+-    if (result === null || !result.ok) {
+-      let requestLength = new Date().getTime() - requestStart;
+-      setTimeout(() => this.connectOnAlive(), 350 - requestLength);
+-    } else {
+-      this.activeServerPort = parseInt(result.url.split(":")[2].split("/")[0]);
+-      this.ws_connect();
+-    }
++    this.activeServerPort = this.serverPorts[0];
++    this.ws_connect();
+   }
+ 
+   //////////////////////////////////////////////////////////////
+@@ -524,7 +508,7 @@
+ 
+     // Reconnect when alive again
+     if (this.serverConnectionRequested) {
+-      this.connectOnAlive();
++      setTimeout(() => this.connectOnAlive(), 350);
+     }
+   }
+ 

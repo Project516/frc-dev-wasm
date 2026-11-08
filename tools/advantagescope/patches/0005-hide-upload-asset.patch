@@ -1,0 +1,17 @@
+Remove the Upload Asset menu item. Uploads need a server.
+
+--- a/src/main/lite/main.ts
++++ b/src/main/lite/main.ts
+@@ -453,12 +453,6 @@
+                     }
+                   };
+                 })
+-              },
+-              {
+-                content: `Upload Asset`,
+-                callback() {
+-                  openUploadAsset();
+-                }
+               }
+             ];
+             break;

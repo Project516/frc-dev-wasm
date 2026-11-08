@@ -401,7 +401,7 @@ comes later. 2027 runs on java-web (Java 25), 2026 on CheerpJ (Java 17).
   methods that its jars add or remove, so the shim can follow. `node packages/java/build.mjs --year <y>`
   then prints how many natives have an Impl.
 - Deploys: `.github/workflows/deploy.yml` runs `pnpm build:all` and publishes
-  `apps/ide/dist` to GitHub Pages on every push to master (and by hand from the
+  `apps/ide/dist` to GitHub Pages when a release is published (and by hand from the
   Actions tab). It caches `.cache` and `apps/ide/public/runtime`, so only what
   changed is rebuilt. It runs `scripts/check-dist.sh` first, which refuses a dist without every
   separately built part. `.github/workflows/deploy-proxy.yml` deploys the proxy Worker when its code changes.

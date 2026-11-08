@@ -1,14 +1,8 @@
 name: Deploy
 
 on:
-  push:
-    branches: [master]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'apps/ide/tests/**'
-      - 'packages/*/test/**'
-      - 'packages/proxy/**'
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -18,7 +12,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:

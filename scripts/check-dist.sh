@@ -5,6 +5,12 @@ root=$(git rev-parse --show-toplevel)
 dist="$root/apps/ide/dist"
 [ -f "$dist/index.html" ] || { echo "apps/ide/dist is missing; run pnpm build:all first" >&2; exit 1; }
 
+# A dist from another commit, or from uncommitted changes, must not go live.
+head=$(git -C "$root" describe --always --dirty --abbrev=40)
+built=$(cat "$dist/.commit" 2>/dev/null || echo unknown)
+[ "$built" = "$head" ] || { echo "apps/ide/dist was built from $built, not $head; run pnpm build:all" >&2; exit 1; }
+case "$head" in *-dirty) echo "the working tree has uncommitted changes" >&2; exit 1;; esac
+
 years=$(cd "$root" && node -e "import('./packages/runtime/src/years.ts').then((m) => console.log(m.WPILIB_YEARS.join(' ')))")
 java_web_years=$(cd "$root" && node -e "import('./packages/runtime/src/years.ts').then((m) => console.log(m.WPILIB_YEARS.filter((y) => m.JAVA_WEB_YEARS.includes(y)).join(' ')))")
 java_web_files=$([ -z "$java_web_years" ] || echo runtime/java-web/java-web.js runtime/java-web/java-web-worker.js runtime/java-web/boot.pack runtime/java-web/jdk/java.base.jar runtime/java-web/jdk/javac.pack)

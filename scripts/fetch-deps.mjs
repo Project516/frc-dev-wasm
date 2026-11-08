@@ -172,7 +172,10 @@ async function get(url, read, init) {
       console.warn(`${url}: ${err.cause?.code ?? err.message}, trying the proxy`);
       // The proxy answers 403 for a repository it does not list; that is the server's failure, not a missing file
       return get(PROXY + url.slice('https://'.length), read, { headers: { origin: 'http://localhost' } }).catch((proxied) => {
-        throw proxied instanceof Missing && proxied.message.endsWith(': 403') ? err : proxied;
+        // A 403 means the proxy does not list this repository, so only the server's failure counts
+        if (proxied instanceof Missing && proxied.message.endsWith(': 403')) throw err;
+        if (proxied instanceof Missing) throw proxied;
+        throw new Error(`${url}: ${err.cause?.code ?? err.message}, and through the proxy: ${proxied.message}`, { cause: err });
       });
     }
   }

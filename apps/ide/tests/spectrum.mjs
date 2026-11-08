@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright-core'
 import { buildCode, runCommand as runWpilibCommand, simulate } from './wpilib.mjs'
 import { preview } from 'vite'
+import { quickInputReady } from './quickInput.mjs'
 
 const REPO = process.env.SPECTRUM_REPO ?? 'https://github.com/Spectrum3847/2026-Spectrum'
 
@@ -72,7 +73,7 @@ try {
   await page.locator('.statusbar-item', { hasText: 'WPILib' }).first().waitFor({ timeout: 30_000 })
 
   await runCommand('Git: Clone')
-  await page.waitForSelector('.quick-input-box input', { timeout: 15_000 })
+  await quickInputReady(page)
   await page.keyboard.type(REPO)
   await page.keyboard.press('Enter')
   // The folder to clone into: /workspace, where its dialog starts. It can still be listing the

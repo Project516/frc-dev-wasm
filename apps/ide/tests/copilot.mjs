@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright-core'
 import { preview } from 'vite'
+import { quickInputReady } from './quickInput.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 mkdirSync(join(root, 'test-results'), { recursive: true })
@@ -141,7 +142,7 @@ try {
   await page.locator('.statusbar-item', { hasText: 'Sign In' }).first().waitFor({ timeout: 60_000 })
   check('signed out, the Copilot status offers to sign in', true)
   await status.click()
-  await page.locator('.quick-input-widget input').waitFor({ timeout: 30_000 })
+  await quickInputReady(page, 30_000)
   check("VS Code's Copilot setup is replaced by the GitHub sign-in", (await page.locator('.monaco-dialog-box', { hasText: 'Continue with Google' }).count()) === 0)
   await page.keyboard.type(TOKEN)
   await page.keyboard.press('Enter')

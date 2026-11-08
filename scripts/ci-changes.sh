@@ -11,7 +11,7 @@ ide=0 java=0 teams=0
 while IFS= read -r file; do
   case "$file" in
     # Text only, or tested by the checks job
-    *.md | docs/* | LICENSE | renovate.json | .github/pull_request_template.md | packages/proxy/*) ;;
+    *.md | docs/* | LICENSE | renovate.json | packages/proxy/*) ;;
     # The IDE alone: the workbench, its git, terminal and Copilot, the tools
     apps/ide/src/copilot/* | apps/ide/src/git/* | apps/ide/src/frc/terminal/* | packages/vscode-git/*) ide=1 ;;
     apps/ide/tests/teams.mjs | apps/ide/tests/spectrum.mjs | apps/ide/tests/junitTeam.mjs) teams=1 ;;

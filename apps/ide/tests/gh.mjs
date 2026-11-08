@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright-core'
 import { preview } from 'vite'
+import { quickInputReady } from './quickInput.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 mkdirSync(join(root, 'test-results'), { recursive: true })
@@ -156,7 +157,7 @@ try {
   async function withPrompt(command, answer, pattern) {
     await page.keyboard.type(command, { delay: 4 })
     await page.keyboard.press('Enter')
-    await page.locator('.quick-input-widget input').waitFor({ timeout: 60_000 })
+    await quickInputReady(page, 60_000)
     if (answer === null) await page.keyboard.press('Escape')
     else {
       await page.keyboard.type(answer)

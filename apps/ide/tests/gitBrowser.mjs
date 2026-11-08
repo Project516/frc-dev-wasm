@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { chromium } from 'playwright-core'
 import { unzipSync, zipSync } from 'fflate'
 import { preview } from 'vite'
+import { quickInputReady } from './quickInput.mjs'
 
 const SMALL_REPO = 'octocat/Hello-World'
 const BIG_REPO = process.env.GIT_TEST_BIG_REPO ?? 'Spectrum3847/2026-Spectrum'
@@ -55,7 +56,7 @@ export async function browserTests({ root, check }) {
     await row.click()
   }
   const answer = async (page, text) => {
-    await page.waitForSelector('.quick-input-box input', { timeout: 15_000 })
+    await quickInputReady(page)
     await page.keyboard.type(text)
     await page.keyboard.press('Enter')
   }
@@ -215,7 +216,7 @@ export async function browserTests({ root, check }) {
       const { writeFileSync } = await import('node:fs')
       writeFileSync(githubZip, zipSync({ 'Repo-main/README.md': enc('# Repo'), 'Repo-main/src/A.java': enc('class A {}') }))
       await chooser.setFiles(githubZip)
-      await page.waitForSelector('.quick-input-box input')
+      await quickInputReady(page)
       await page.keyboard.press('Enter')
       await explorerRow(page, 'README.md').waitFor({ timeout: 30_000 })
       check('the imported project is the workspace folder', await page.locator('.explorer-viewlet .pane-header', { hasText: /Repo-main/i }).first().isVisible())

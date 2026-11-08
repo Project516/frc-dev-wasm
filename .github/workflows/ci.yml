@@ -204,12 +204,6 @@ jobs:
           restore-keys: playwright-
       # Downloads the browser only when the cache lacks this Playwright's build
       - run: pnpm --filter @frc-dev-wasm/ide exec playwright-core install --with-deps chromium-headless-shell
-      # The team suites record their downloads once and replay them, keyed on the tests that pin the projects
-      - if: matrix.group == 'teams'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/frc-har
-          key: har-${{ hashFiles('apps/ide/tests/teams.mjs', 'apps/ide/tests/spectrum.mjs', 'apps/ide/tests/junitTeam.mjs') }}
       # The test browsers reach the proxy at CI's own address (scripts/ci-proxy.mjs), kept out of the logs
       - name: Run the ${{ matrix.group }} suites
         run: |
@@ -217,7 +211,6 @@ jobs:
           bash scripts/ci-suites.sh "$GROUP"
         env:
           GROUP: ${{ matrix.group }}
-          HAR_DIR: ~/.cache/frc-har
           CI_PROXY_URL: ${{ secrets.CI_PROXY_URL }}
           NODE_OPTIONS: --import ${{ github.workspace }}/scripts/ci-proxy.mjs
       - if: failure()

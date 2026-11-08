@@ -38,7 +38,8 @@ passes through the proxy. Use one you trust.
   rate limited, and you are trusting its operator with your credentials.
 - Your own proxy keeps credentials between you and the remote. The Worker in
   `packages/proxy` is free to run on Cloudflare; its README has the steps.
-  Set `git.corsProxy` to `https://<your proxy>/git`.
+  Set `wpilib.vendorProxy` to `https://<your proxy>`; git then uses its `/git` route.
+  `git.corsProxy` overrides that for git alone.
 
 The IDE turns a remote URL such as `https://gitlab.com/team/robot.git` into
 `<proxy>/gitlab.com/team/robot.git/...`, which is the path the proxy reads

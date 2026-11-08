@@ -24,7 +24,8 @@ and opens it, as vscode.dev/github/owner/repo does.
 Projects stay in your browser's storage. Push them to GitHub, or use **WPILib: Export Project as Zip** to keep a
 copy. For projects in the browser, all git traffic, including a GitHub token, passes through a proxy because
 GitHub sends no CORS headers for git. By default that is the project's own proxy (`packages/proxy`). To avoid
-it, deploy your own and set `git.corsProxy` and `wpilib.vendorProxy`. See [docs/git.md](docs/git.md).
+it, deploy your own and set `wpilib.vendorProxy` to its address, which moves git, GitHub sign-in and vendor
+library downloads to it. See [docs/git.md](docs/git.md).
 See [docs/known-limits.md](docs/known-limits.md) for what does not work yet.
 
 ## Development

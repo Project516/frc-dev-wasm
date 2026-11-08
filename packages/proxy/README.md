@@ -37,8 +37,8 @@ is enough for a team.
 4. Check it:
    `curl -H 'Origin: <your IDE address>' https://<your proxy>/maven/maven.revrobotics.com/com/revrobotics/frc/REVLib-java/2026.0.5/REVLib-java-2026.0.5.pom`
    prints a pom file. Without the `Origin` header it answers 403.
-5. In the IDE, set `git.corsProxy` to `https://<your proxy>/git` and
-   `wpilib.vendorProxy` to `https://<your proxy>`.
+5. In the IDE, set `wpilib.vendorProxy` to `https://<your proxy>`. Vendor libraries, the
+   vendor library list, git (its `/git` route) and GitHub sign-in then all go through it.
 6. The `Origin` check keeps other websites out, not scripts. Add a rate
    limiting rule for the proxy's hostname in the Cloudflare dashboard
    (Security, WAF, Rate limiting rules), so a script cannot use up the daily

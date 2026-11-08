@@ -20,7 +20,11 @@ because the server sends no CORS headers:
 Requests must come from an address in `ALLOWED_ORIGINS` or from
 `http://localhost`. Nothing is stored or logged by the Worker.
 
-The project's instance runs at `https://frc-proxy.project516.dev`.
+The project's instance runs at `https://frc-proxy.project516.dev`. CI reaches
+the same Worker at a second address (the `CI_PROXY_URL` secret): a Cloudflare
+Pages project that runs `pages/_worker.js`, which hands each request to the
+Worker through a service binding named `PROXY`. To change that file, upload it
+as a new deployment of the Pages project.
 
 ## Deploy your own
 

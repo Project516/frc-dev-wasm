@@ -1,0 +1,156 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Type checks and the tests that need no built runtime
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @frc-dev-wasm/ide typecheck
+      - run: pnpm --filter @frc-dev-wasm/runtime typecheck
+      - run: pnpm --filter @frc-dev-wasm/sim-gui typecheck
+      - run: pnpm --filter @frc-dev-wasm/proxy test
+      - run: pnpm --filter @frc-dev-wasm/ide test:year
+      - run: pnpm --filter @frc-dev-wasm/ide test:security
+      - run: node apps/ide/tests/fileops.mjs && node apps/ide/tests/ghcli.mjs && node apps/ide/tests/copilotApi.mjs && node apps/ide/tests/wpilibDocs.mjs
+      - run: |
+          for t in vendor gradle gversion logs project simhost; do pnpm --filter @frc-dev-wasm/runtime test:$t; done
+      - run: pnpm --filter @frc-dev-wasm/sim-gui test:protocol
+      - run: pnpm --filter @frc-dev-wasm/wpigui-tools test:source
+
+  # Everything pnpm build:all makes. The cache keeps toolchains, sources and built runtime parts,
+  # so a warm run rebuilds only what changed. Runs on master too, to keep that cache warm for
+  # pull requests and releases.
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .cache
+            apps/ide/public/runtime
+          key: build-${{ hashFiles('scripts/*.mjs', 'packages/wpigui-tools/*.mjs', 'packages/wpigui-tools/src/**', 'packages/wpigui-tools/patches/**', 'packages/wpigui-tools/targets/**', 'packages/vscode-wpilib/build.mjs', 'packages/vscode-wpilib/patches/**', 'packages/vscode-wpilib/replacements/**', 'packages/vscode-wpilib/shims/**', 'packages/java-web/build.mjs', 'packages/git-wasm/build.mjs', 'packages/git-wasm/config.mak', 'packages/git-wasm/patches/**', 'packages/git-wasm/src/pre.js', 'packages/git-wasm/src/library.js', 'packages/vscode-git/build.mjs', 'packages/vscode-git/shims/**', 'apps/ide/src/frc/terminal/utilities.ts') }}
+          restore-keys: build-
+      - run: pnpm build:all
+        env:
+          WPIGUI_JOBS: 4
+          TERMINAL_JOBS: 4
+          GIT_JOBS: 4
+      - run: bash scripts/check-dist.sh
+      # The nightly site is this build of master
+      - if: github.event_name == 'push'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site
+          path: apps/ide/dist
+          include-hidden-files: true
+          retention-days: 1
+
+  # Publishes this build of master to the R2 bucket behind frcdev-nightly.project516.dev
+  nightly:
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    # Holds the R2 key and runs only on master
+    environment: cloudflare
+    timeout-minutes: 30
+    concurrency:
+      group: nightly
+      cancel-in-progress: true
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site
+          path: site
+      - run: sudo apt-get install -y -q rclone
+      # Uploads only the files whose checksum changed, so a push costs a few dozen R2 writes.
+      # Vite's content-hashed assets never change, so Cloudflare may cache them for good; every
+      # other file is revalidated, so a new nightly shows up at once.
+      - run: |
+          rclone sync site/assets r2:frcdev-nightly/assets --checksum --header-upload 'Cache-Control: public, max-age=31536000, immutable'
+          rclone sync site r2:frcdev-nightly --checksum --exclude '/assets/**' --header-upload 'Cache-Control: no-cache'
+        env:
+          RCLONE_CONFIG_R2_TYPE: s3
+          RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+          RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          RCLONE_CONFIG_R2_NO_CHECK_BUCKET: 'true'
+
+  # The browser and Java suites, in three groups of about the same length
+  suites:
+    if: github.event_name != 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [ide, java, teams]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .cache
+            apps/ide/public/runtime
+          key: build-${{ hashFiles('scripts/*.mjs', 'packages/wpigui-tools/*.mjs', 'packages/wpigui-tools/src/**', 'packages/wpigui-tools/patches/**', 'packages/wpigui-tools/targets/**', 'packages/vscode-wpilib/build.mjs', 'packages/vscode-wpilib/patches/**', 'packages/vscode-wpilib/replacements/**', 'packages/vscode-wpilib/shims/**', 'packages/java-web/build.mjs', 'packages/git-wasm/build.mjs', 'packages/git-wasm/config.mak', 'packages/git-wasm/patches/**', 'packages/git-wasm/src/pre.js', 'packages/git-wasm/src/library.js', 'packages/vscode-git/build.mjs', 'packages/vscode-git/shims/**', 'apps/ide/src/frc/terminal/utilities.ts') }}
+          restore-keys: build-
+      # Brings the restored outputs up to date with this commit
+      - run: pnpm build:all
+        env:
+          WPIGUI_JOBS: 4
+          TERMINAL_JOBS: 4
+          GIT_JOBS: 4
+      - run: pnpm --filter @frc-dev-wasm/ide exec playwright-core install --with-deps chromium-headless-shell
+      - name: Run the ${{ matrix.group }} suites
+        run: bash scripts/ci-suites.sh ${{ matrix.group }}
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-results-${{ matrix.group }}
+          path: |
+            apps/ide/test-results
+            packages/*/test-results
+          if-no-files-found: ignore
+          retention-days: 7

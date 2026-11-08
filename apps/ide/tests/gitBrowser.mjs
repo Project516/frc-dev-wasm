@@ -51,7 +51,8 @@ export async function browserTests({ root, check }) {
     await page.locator('.quick-input-widget input').fill(`> ${title}`)
     // Fuzzy matching can rank another command first, so pick the row by its title
     const row = page.locator('.quick-input-list .monaco-list-row', { hasText: title }).first()
-    await row.waitFor({ timeout: 10_000 })
+    // A folder just opened can take a while on a slow machine to register its git commands
+    await row.waitFor({ timeout: 30_000 })
     await page.waitForTimeout(300)
     await row.click()
   }

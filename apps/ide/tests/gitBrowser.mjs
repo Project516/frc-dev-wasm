@@ -61,6 +61,19 @@ export async function browserTests({ root, check }) {
     await page.keyboard.type(text)
     await page.keyboard.press('Enter')
   }
+  const gitVersion = (page) =>
+    page.evaluate(async () => {
+      const run = globalThis.frcDevWasmGit?.run
+      if (!run) return 'frcDevWasmGit is not set'
+      const out = []
+      const text = (prefix) => (bytes) => out.push(prefix + new TextDecoder().decode(bytes))
+      try {
+        const code = await run({ args: ['--version'], stdout: text(''), stderr: text('stderr: ') })
+        return `exit ${code}: ${out.join('')}`
+      } catch (error) {
+        return `threw ${error}`
+      }
+    })
   const explorerRow = (page, text) => page.locator('.explorer-viewlet .monaco-list-row', { hasText: text }).first()
   const toast = (page, text) => page.locator('.notification-toast', { hasText: text }).first()
 
@@ -255,7 +268,11 @@ export async function browserTests({ root, check }) {
       check('export skips build, .gradle and bin', !names.some((n) => /^(build|\.gradle|bin)\//.test(n)) && names.includes('build.gradle'), `${names.length} files`)
       check('export keeps gradlew executable', gradlewIsExecutable(bytes))
 
-      await runCommand(page, 'Git: Initialize Repository')
+      await runCommand(page, 'Git: Initialize Repository').catch(async (error) => {
+        // VS Code's Git extension hides its commands when it cannot run git, so say what git answers
+        console.log(`git --version through the IDE: ${await gitVersion(page)}`)
+        throw error
+      })
       await page.locator('.quick-input-list .monaco-list-row', { hasText: 'robot-folder' }).first().click()
       await page.waitForFunction(() => document.querySelector('.statusbar')?.textContent?.includes('main'), undefined, { timeout: 30_000 })
       check('Git works in a folder opened from disk', (await opfs(page, 'read', '/robot-folder/.git/HEAD'))?.includes('refs/heads/main') ?? false)

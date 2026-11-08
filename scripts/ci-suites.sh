@@ -26,7 +26,7 @@ case "${1:?group: ide, java or teams}" in
   teams)
     # With HAR_DIR the team projects' downloads are recorded once and replayed after that
     har=${HAR_DIR/#\~/$HOME}
-    [ -n "$har" ] && mkdir -p "$har/teams"
+    if [ -n "$har" ]; then mkdir -p "$har/teams" || exit 1; fi
     run env ${har:+TEAMS_HAR=$har/teams} pnpm --filter @frc-dev-wasm/ide test:teams2026
     run env ${har:+TEAMS_HAR=$har/teams} pnpm --filter @frc-dev-wasm/ide test:teams2027
     run env ${har:+SPECTRUM_HAR=$har/spectrum.zip} pnpm --filter @frc-dev-wasm/ide test:spectrum

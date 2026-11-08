@@ -270,7 +270,11 @@ export async function browserTests({ root, check }) {
 
       await runCommand(page, 'Git: Initialize Repository').catch(async (error) => {
         // VS Code's Git extension hides its commands when it cannot run git, so say what git answers
-        console.log(`git --version through the IDE: ${await gitVersion(page)}`)
+        const answer = await Promise.race([
+          gitVersion(page).catch((diagnosticError) => `threw ${diagnosticError}`),
+          new Promise((resolve) => setTimeout(() => resolve('no answer in 10 s'), 10_000).unref())
+        ])
+        console.log(`git --version through the IDE: ${answer}`)
         throw error
       })
       await page.locator('.quick-input-list .monaco-list-row', { hasText: 'robot-folder' }).first().click()

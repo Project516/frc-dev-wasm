@@ -14,8 +14,7 @@ if (target) {
       await route.fulfill({ response })
     } catch (error) {
       console.error(`ci-proxy: ${error.message}`)
-      // Fails only when the page is already gone
-      await route.abort('failed').catch(() => {})
+      await route.abort('failed').catch((abortError) => console.error(`ci-proxy: abort: ${abortError.message}`))
     }
   }
   const withRoute = async (context) => {

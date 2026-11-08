@@ -7,8 +7,12 @@ base=${1:-}
 all='["ide","java","teams"]'
 [ -n "$base" ] || { echo "groups=$all"; exit 0; }
 
+# Outside the loop, so set -e stops on a bad base instead of reporting no changes
+changed=$(git diff --name-only "$base"...HEAD)
+
 ide=0 java=0 teams=0
 while IFS= read -r file; do
+  [ -n "$file" ] || continue
   case "$file" in
     # Text only, or tested by the checks job
     *.md | docs/* | LICENSE | renovate.json | packages/proxy/*) ;;
@@ -25,7 +29,7 @@ while IFS= read -r file; do
     # Everything else: the workbench setup, dependencies, build scripts, CI itself
     *) ide=1 java=1 teams=1 ;;
   esac
-done < <(git diff --name-only "$base"...HEAD)
+done <<< "$changed"
 
 groups=()
 [ $ide = 1 ] && groups+=('"ide"')

@@ -27,6 +27,8 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
       - id: pick
+        # bash adds pipefail, so a failing script fails the step despite tee
+        shell: bash
         run: bash scripts/ci-changes.sh "$BASE" | tee -a "$GITHUB_OUTPUT"
         env:
           BASE: ${{ github.event.pull_request.base.sha }}

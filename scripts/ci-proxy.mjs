@@ -12,7 +12,9 @@ if (target) {
     try {
       const response = await route.fetch({ url: target + route.request().url().slice(PROXY.length), maxRedirects: 0 })
       await route.fulfill({ response })
-    } catch {
+    } catch (error) {
+      console.error(`ci-proxy: ${error.message}`)
+      // Fails only when the page is already gone
       await route.abort('failed').catch(() => {})
     }
   }

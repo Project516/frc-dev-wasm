@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright-core'
@@ -73,6 +74,19 @@ try {
   const status = page.locator('.statusbar-item', { hasText: 'WPILib' })
   await status.first().waitFor({ timeout: 30_000 })
   check('workbench renders with WPILib status bar item', true)
+
+  const version = JSON.parse(readFileSync(join(root, '../../package.json'), 'utf8')).version
+  let commit = 'unknown'
+  try {
+    commit = execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
+  } catch {}
+  await runWpilibCommand(page, 'Help: About')
+  const about = page.locator('.monaco-dialog-box')
+  await about.waitFor({ timeout: 10_000 })
+  const aboutText = await about.innerText()
+  check('Help: About names the release and its commit', !process.env.SMOKE_URL ? aboutText.includes(`FRC Dev ${version} (${commit})`) : aboutText.includes(`FRC Dev ${version} (`), JSON.stringify(aboutText.slice(0, 200)))
+  await page.keyboard.press('Escape')
+  await about.waitFor({ state: 'hidden', timeout: 10_000 })
 
   if (existsSync(join(root, 'dist/runtime/2026/manifest.json'))) {
     await expectPoll(() => [...requested].some((p) => p.endsWith('/runtime/2026/wpilib/templates.zip')))

@@ -104,7 +104,7 @@ function frcManifest(ownGit: boolean, ownWpilib: boolean): IExtensionManifest {
         {
           id: 'wpilib.gettingStarted',
           title: 'Get Started with FRC',
-          description: 'Create a robot project, build it, and run it in simulation.',
+          description: `Create a robot project, build it, and run it in simulation.\nFRC Dev ${__APP_VERSION__}`,
           steps: [
             {
               id: 'create',

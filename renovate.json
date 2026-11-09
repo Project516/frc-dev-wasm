@@ -4,6 +4,7 @@
   "prConcurrentLimit": 3,
   "dependencyDashboard": true,
   "semanticCommits": "enabled",
+  "minimumReleaseAge": "1 day",
   "packageRules": [
     {
       "description": "The VS Code workbench packages release together and must stay on one version",

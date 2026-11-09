@@ -64,7 +64,6 @@ minimumReleaseAgeExclude:
   - '@codingame/monaco-vscode-yaml-default-extension@37.3.2 || 37.3.7'
   - '@codingame/monaco-vscode-secret-storage-service-override@37.3.2 || 37.3.7'
   - '@codingame/monaco-vscode-scm-service-override@37.3.2 || 37.3.7'
-  - '@project516/java-web@0.1.0 || 0.1.1'
 allowBuilds:
   '@mongodb-js/zstd': false
   node-liblzma: false

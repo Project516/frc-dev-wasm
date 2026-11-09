@@ -1,6 +1,6 @@
 // Copies java-web, the JVM that runs WPILib 2027 (Java 25) in the browser, from its npm package (the version is
 // pinned in package.json) into apps/ide/public/runtime/java-web/: java-web.js, its worker, boot.pack and jdk/
-// (one jar per module, and javac.pack).
+// (image.jar with java.base, one jar per other module, app.pack, javac.pack and the OpenJDK license notices).
 // Skips unless a season of WPILIB_YEARS runs on java-web; `--force` copies it anyway.
 import fs from 'node:fs'
 import path from 'node:path'

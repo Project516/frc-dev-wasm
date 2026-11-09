@@ -305,10 +305,12 @@ comes later. 2027 runs on java-web (Java 25), 2026 on CheerpJ (Java 17).
 - `packages/java-web`: `build.mjs` copies java-web (github.com/Project516/java-web, AGPL-3.0, a JVM in TypeScript
   that runs Java 25 bytecode on the real OpenJDK 25 class library) from its npm package `@project516/java-web`, at the
   exact version in `package.json`, into `apps/ide/public/runtime/java-web/`: `java-web.js`, its worker, `boot.pack`
-  and `jdk/<module>.jar` (one jar per JDK module, 30 files, 95 MB, read with HTTP Range; `java.base.jar` always loads;
-  `.jar` so hosts such as GitHub Pages do not compress them, since they apply Range to the compressed bytes) and
-  `jdk/javac.pack` (javac loads it on first use), shared by the seasons that use it. `jdk.localedata` (27 MB) stays
-  out: the IDE does not turn on java-web's `localeData`, so other locales format as English. It skips unless a season
+  and `jdk/`: `image.jar` (java.base and the JDK image's index, 31 MB) and one `<module>.jar` per other module, all
+  read with HTTP Range (`.jar` so hosts such as GitHub Pages do not compress them, since they apply Range to the
+  compressed bytes), `app.pack` (what a typical program reads beyond boot, loaded on first use), `javac.pack` (javac
+  loads it on first use) and the OpenJDK license notices, shared by the seasons that use it. `jdk.localedata.jar`
+  (26 MB) stays out: the IDE does not turn on java-web's `localeData`, so other locales format as English. A browser
+  fetches only the parts of the modules a program uses. It skips unless a season
   of `WPILIB_YEARS` runs on it (`--force` copies anyway). `check-dist.sh` refuses a dist without it.
   `pnpm --filter @frc-dev-wasm/java-web test` (`test/frc.mjs`) runs the 2027 HAL and shim tests on java-web under
   Node with the package's `runNode` and checks that as many run as on HotSpot, that javac compiles WPILib's

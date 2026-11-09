@@ -44,15 +44,24 @@ export async function browserTests({ root, check }) {
     return { context, page, seen }
   }
 
-  const runCommand = async (page, title) => {
-    await page.evaluate(() => (document.activeElement instanceof HTMLElement ? document.activeElement.blur() : undefined))
-    await page.keyboard.press('F1')
-    // F1 prefills the prompt with ">" once it opens, so set the whole value instead of typing
-    await page.locator('.quick-input-widget input').fill(`> ${title}`)
+  const runCommand = async (page, title, timeout = 30_000) => {
     // Fuzzy matching can rank another command first, so pick the row by its title
     const row = page.locator('.quick-input-list .monaco-list-row', { hasText: title }).first()
-    // A folder just opened can take a while on a slow machine to register its git commands
-    await row.waitFor({ timeout: 30_000 })
+    // The palette lists the commands registered when it opens, so reopen it until one that an extension
+    // registers after a reload shows up
+    for (const start = Date.now(); ; ) {
+      await page.evaluate(() => (document.activeElement instanceof HTMLElement ? document.activeElement.blur() : undefined))
+      await page.keyboard.press('F1')
+      // F1 prefills the prompt with ">" once it opens, so set the whole value instead of typing
+      await page.locator('.quick-input-widget input').fill(`> ${title}`)
+      try {
+        await row.waitFor({ timeout: 5_000 })
+        break
+      } catch (error) {
+        if (Date.now() - start > timeout) throw error
+        await page.keyboard.press('Escape')
+      }
+    }
     await page.waitForTimeout(300)
     await row.click()
   }
@@ -61,19 +70,6 @@ export async function browserTests({ root, check }) {
     await page.keyboard.type(text)
     await page.keyboard.press('Enter')
   }
-  const gitVersion = (page) =>
-    page.evaluate(async () => {
-      const run = globalThis.frcDevWasmGit?.run
-      if (!run) return 'frcDevWasmGit is not set'
-      const out = []
-      const text = (prefix) => (bytes) => out.push(prefix + new TextDecoder().decode(bytes))
-      try {
-        const code = await run({ args: ['--version'], stdout: text(''), stderr: text('stderr: ') })
-        return `exit ${code}: ${out.join('')}`
-      } catch (error) {
-        return `threw ${error}`
-      }
-    })
   const explorerRow = (page, text) => page.locator('.explorer-viewlet .monaco-list-row', { hasText: text }).first()
   const toast = (page, text) => page.locator('.notification-toast', { hasText: text }).first()
 
@@ -268,29 +264,7 @@ export async function browserTests({ root, check }) {
       check('export skips build, .gradle and bin', !names.some((n) => /^(build|\.gradle|bin)\//.test(n)) && names.includes('build.gradle'), `${names.length} files`)
       check('export keeps gradlew executable', gradlewIsExecutable(bytes))
 
-      await runCommand(page, 'Git: Initialize Repository').catch(async (error) => {
-        // VS Code's Git extension hides its commands when it cannot run git, so say what git answers
-        const answer = await Promise.race([
-          gitVersion(page).catch((diagnosticError) => `threw ${diagnosticError}`),
-          new Promise((resolve) => setTimeout(() => resolve('no answer in 10 s'), 10_000).unref())
-        ])
-        console.log(`git --version through the IDE: ${answer}`)
-        // Show Git Output is offered whenever the Git extension runs, even when it found no git
-        await page.keyboard.press('Escape')
-        await page.keyboard.press('F1')
-        await page.locator('.quick-input-widget input').fill('> Git:')
-        await page.waitForTimeout(1500)
-        const rows = await page.locator('.quick-input-list .monaco-list-row').allInnerTexts()
-        console.log(`Git commands offered: ${rows.length ? rows.map((r) => r.split('\n')[0]).join(' | ') : 'none'}`)
-        const showOutput = page.locator('.quick-input-list .monaco-list-row', { hasText: 'Git: Show Git Output' }).first()
-        if (await showOutput.count()) {
-          await showOutput.click()
-          await page.waitForTimeout(2000)
-          const log = await page.locator('.output-view .view-lines').first().innerText().catch(() => '')
-          console.log(`Git output:\n${log.slice(-3000)}`)
-        }
-        throw error
-      })
+      await runCommand(page, 'Git: Initialize Repository')
       await page.locator('.quick-input-list .monaco-list-row', { hasText: 'robot-folder' }).first().click()
       await page.waitForFunction(() => document.querySelector('.statusbar')?.textContent?.includes('main'), undefined, { timeout: 30_000 })
       check('Git works in a folder opened from disk', (await opfs(page, 'read', '/robot-folder/.git/HEAD'))?.includes('refs/heads/main') ?? false)

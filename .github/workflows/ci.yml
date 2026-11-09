@@ -5,6 +5,9 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+  # Restoring the build cache each week keeps GitHub from evicting it after 7 days unused
+  schedule:
+    - cron: '17 9 * * 1'
 
 permissions:
   contents: read
@@ -110,7 +113,8 @@ jobs:
       # The inputs of the separately built parts; the suites restore the same key
       - id: key
         run: echo "key=build-${{ hashFiles('scripts/*.mjs', 'packages/wpigui-tools/*.mjs', 'packages/wpigui-tools/src/**', 'packages/wpigui-tools/patches/**', 'packages/wpigui-tools/targets/**', 'packages/vscode-wpilib/build.mjs', 'packages/vscode-wpilib/patches/**', 'packages/vscode-wpilib/replacements/**', 'packages/vscode-wpilib/shims/**', 'packages/java-web/build.mjs', 'packages/git-wasm/build.mjs', 'packages/git-wasm/config.mak', 'packages/git-wasm/patches/**', 'packages/git-wasm/src/pre.js', 'packages/git-wasm/src/library.js', 'packages/vscode-git/build.mjs', 'packages/vscode-git/shims/**', 'apps/ide/src/frc/terminal/utilities.ts') }}" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - id: restore
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .cache
@@ -122,7 +126,17 @@ jobs:
           WPIGUI_JOBS: 4
           TERMINAL_JOBS: 4
           GIT_JOBS: 4
+          # Help: About and Get Started of the nightly say so
+          FRC_DEV_CHANNEL: ${{ github.event_name == 'push' && 'nightly' || '' }}
       - run: bash scripts/check-dist.sh
+      # Only master saves, so pull requests cannot push its entry out of the 10 GB of caches
+      - if: github.event_name != 'pull_request' && steps.restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .cache
+            apps/ide/public/runtime
+          key: ${{ steps.key.outputs.key }}
       # The nightly site is this build of master
       - if: github.event_name == 'push'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -167,7 +181,7 @@ jobs:
 
   # The browser and Java suites, in three groups of about the same length
   suites:
-    if: github.event_name != 'push' && needs.changes.outputs.groups != '[]'
+    if: contains(fromJSON('["pull_request", "workflow_dispatch"]'), github.event_name) && needs.changes.outputs.groups != '[]'
     # A failed check stops the hour of suites
     needs: [changes, checks, build]
     runs-on: ubuntu-latest

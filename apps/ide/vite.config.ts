@@ -31,7 +31,7 @@ function commit(): string {
 
 export default defineConfig({
   define: {
-    __APP_VERSION__: JSON.stringify(`${version} (${commit()})`),
+    __APP_VERSION__: JSON.stringify(`${version}${process.env.FRC_DEV_CHANNEL ? `-${process.env.FRC_DEV_CHANNEL}` : ''} (${commit()})`),
     __APP_DATE__: JSON.stringify(new Date().toISOString())
   },
   base: process.env.BASE_PATH ?? './',

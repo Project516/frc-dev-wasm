@@ -407,13 +407,16 @@ comes later. 2027 runs on java-web (Java 25), 2026 on CheerpJ (Java 17).
   separately built part. `.github/workflows/deploy-proxy.yml` deploys the proxy Worker when its code changes.
 - CI: `.github/workflows/ci.yml` runs the type checks and Node-only tests, then `pnpm build:all`
   with the same cache, then the suites in three parallel groups (`scripts/ci-suites.sh ide|java|teams`)
-  on each pull request. The `teams` group (real team projects) reports without failing the run. `scripts/ci-changes.sh` picks the groups from the changed files: a pull request
+  on each pull request (and a manual run). The `teams` group (real team projects) reports without failing the run.
+  Only master and the weekly scheduled run save the build cache, and restoring it each week keeps GitHub from
+  evicting it. `scripts/ci-changes.sh` picks the groups from the changed files: a pull request
   that changes only docs or the proxy builds nothing, and a file no rule names runs every group. CI reaches the proxy at
   its own address, the `CI_PROXY_URL` secret: `scripts/ci-proxy.mjs` (loaded with `NODE_OPTIONS=--import`) sends
   the test browsers' proxy requests there, and pull requests from forks, which get no secrets, can fail on
   clones and vendor downloads. Tests that type into a VS Code input box
   first wait for `quickInputReady` (`apps/ide/tests/quickInput.mjs`): keys sent before the box has focus are lost. On master it only builds, which keeps the cache warm, and uploads the site to
-  the R2 bucket behind `frcdev-nightly.project516.dev`, the nightly. Secrets live in the `cloudflare`
+  the R2 bucket behind `frcdev-nightly.project516.dev`, the nightly, which calls itself `X.Y.Z-nightly`
+  in Help: About (`FRC_DEV_CHANNEL`). Secrets live in the `cloudflare`
   environment, which only master can use.
 - CheerpJ needs HTTP Range support from the server. Vite's dev and preview
   servers have it; `python -m http.server` does not.

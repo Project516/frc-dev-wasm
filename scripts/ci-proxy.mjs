@@ -9,8 +9,12 @@ if (target) {
   const { chromium } = require('playwright-core')
   const PROXY = 'https://frc-proxy.project516.dev'
   // The browser fetches the rewritten URL itself, so large git packs never pass through this process
+  // A failed reroute fails the request, so the test sees an error instead of waiting
   const reroute = (route) =>
-    route.continue({ url: target + route.request().url().slice(PROXY.length) }).catch((error) => console.error(`ci-proxy: ${error.message}`))
+    route.continue({ url: target + route.request().url().slice(PROXY.length) }).catch((error) => {
+      console.error(`ci-proxy: ${error.message}`)
+      return route.abort('failed').catch((abortError) => console.error(`ci-proxy: abort: ${abortError.message}`))
+    })
   const withRoute = async (context) => {
     await context.route(`${PROXY}/**`, reroute)
     return context

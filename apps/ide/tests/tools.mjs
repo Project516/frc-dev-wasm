@@ -10,6 +10,7 @@ import { chromium } from 'playwright-core'
 import { zipSync } from 'fflate'
 import { preview } from 'vite'
 import { WpiLog } from '../../../packages/wpigui-tools/test/wpilog.mjs'
+import { quickInputReady } from './quickInput.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const results = join(root, 'test-results')
@@ -88,7 +89,7 @@ try {
   const chooser = page.waitForEvent('filechooser', { timeout: 10_000 })
   await runCommand('WPILib: Import Project from Zip')
   await (await chooser).setFiles(zip)
-  await page.waitForSelector('.quick-input-box input')
+  await quickInputReady(page)
   await page.keyboard.press('Enter')
   // The import opens as the workspace folder, which reloads the page
   await page.locator('.explorer-viewlet .monaco-list-row', { hasText: 'sample.wpilog' }).first().waitFor({ timeout: 30_000 })
@@ -97,8 +98,7 @@ try {
 
   await runCommand('WPILib: Start Tool')
   await page.waitForSelector('.quick-input-list .monaco-list-row', { timeout: 10_000 })
-  // Keys typed before the pick's input has focus are lost
-  await page.waitForSelector('.quick-input-box input:focus', { timeout: 10_000 })
+  await quickInputReady(page)
   await page.keyboard.type('DataLogTool')
   await page.waitForSelector('.quick-input-list .monaco-list-row.focused[aria-label^="DataLogTool"]')
   await page.keyboard.press('Enter')

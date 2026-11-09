@@ -120,11 +120,12 @@ for (const [kind, ...rest] of steps) {
   const extra = stamp()
   const x = desktop(rest, extra)
   const y = wasm(rest, extra)
+  // Newer git versions hint `git config set advice.`, older ones `git config advice.`
+  const hint = (b) => Buffer.from(b.toString('latin1').replaceAll('git config set advice.', 'git config advice.'), 'latin1')
   x.stdout = norm(x.stdout, desktopDir)
-  x.stderr = norm(x.stderr, desktopDir)
+  x.stderr = hint(norm(x.stderr, desktopDir))
   y.stdout = norm(y.stdout, '/repo')
-  // git 2.56 hints `git config set`, older desktop versions `git config`
-  y.stderr = Buffer.from(norm(y.stderr, '/repo').toString('latin1').replaceAll('git config set advice.', 'git config advice.'), 'latin1')
+  y.stderr = hint(norm(y.stderr, '/repo'))
   const same = x.status === y.status && !Buffer.compare(x.stdout, y.stdout) && !Buffer.compare(x.stderr, y.stderr)
   const name = `git ${rest.join(' ')}`
   console.log(`${same ? 'ok  ' : 'FAIL'} ${name}`)

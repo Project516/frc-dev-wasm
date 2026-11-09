@@ -19,6 +19,7 @@ import { chromium } from 'playwright-core'
 import { JAVA_WEB_YEARS, WPILIB_YEARS } from '../../../packages/runtime/src/years.ts'
 import { runCommand, simulate } from './wpilib.mjs'
 import { preview } from 'vite'
+import { quickInputReady } from './quickInput.mjs'
 
 class Stop extends Error {}
 const YEAR = process.argv[2]
@@ -315,7 +316,7 @@ async function runRepo(repo) {
 
     await stage('clone', [], async () => {
       await runCommand(page, 'Git: Clone')
-      await page.waitForSelector('.quick-input-box input', { timeout: 15_000 })
+      await quickInputReady(page)
       await page.keyboard.type(repo.url)
       await page.keyboard.press('Enter')
       // The folder to clone into is /workspace, where its dialog starts. It can still be listing at the first Enter.

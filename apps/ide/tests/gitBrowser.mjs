@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { chromium } from 'playwright-core'
 import { unzipSync, zipSync } from 'fflate'
 import { preview } from 'vite'
+import { quickInputReady } from './quickInput.mjs'
 
 const SMALL_REPO = 'octocat/Hello-World'
 const BIG_REPO = process.env.GIT_TEST_BIG_REPO ?? 'Spectrum3847/2026-Spectrum'
@@ -43,19 +44,29 @@ export async function browserTests({ root, check }) {
     return { context, page, seen }
   }
 
-  const runCommand = async (page, title) => {
-    await page.evaluate(() => (document.activeElement instanceof HTMLElement ? document.activeElement.blur() : undefined))
-    await page.keyboard.press('F1')
-    // F1 prefills the prompt with ">" once it opens, so set the whole value instead of typing
-    await page.locator('.quick-input-widget input').fill(`> ${title}`)
+  const runCommand = async (page, title, timeout = 30_000) => {
     // Fuzzy matching can rank another command first, so pick the row by its title
     const row = page.locator('.quick-input-list .monaco-list-row', { hasText: title }).first()
-    await row.waitFor({ timeout: 10_000 })
+    // The palette lists the commands registered when it opens, so reopen it until one that an extension
+    // registers after a reload shows up
+    for (const start = Date.now(); ; ) {
+      await page.evaluate(() => (document.activeElement instanceof HTMLElement ? document.activeElement.blur() : undefined))
+      await page.keyboard.press('F1')
+      // F1 prefills the prompt with ">" once it opens, so set the whole value instead of typing
+      await page.locator('.quick-input-widget input').fill(`> ${title}`)
+      try {
+        await row.waitFor({ timeout: 5_000 })
+        break
+      } catch (error) {
+        if (Date.now() - start > timeout) throw error
+        await page.keyboard.press('Escape')
+      }
+    }
     await page.waitForTimeout(300)
     await row.click()
   }
   const answer = async (page, text) => {
-    await page.waitForSelector('.quick-input-box input', { timeout: 15_000 })
+    await quickInputReady(page)
     await page.keyboard.type(text)
     await page.keyboard.press('Enter')
   }
@@ -215,7 +226,7 @@ export async function browserTests({ root, check }) {
       const { writeFileSync } = await import('node:fs')
       writeFileSync(githubZip, zipSync({ 'Repo-main/README.md': enc('# Repo'), 'Repo-main/src/A.java': enc('class A {}') }))
       await chooser.setFiles(githubZip)
-      await page.waitForSelector('.quick-input-box input')
+      await quickInputReady(page)
       await page.keyboard.press('Enter')
       await explorerRow(page, 'README.md').waitFor({ timeout: 30_000 })
       check('the imported project is the workspace folder', await page.locator('.explorer-viewlet .pane-header', { hasText: /Repo-main/i }).first().isVisible())

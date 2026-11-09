@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright-core'
 import { buildCode, simulate } from './wpilib.mjs'
 import { preview } from 'vite'
+import { quickInputReady } from './quickInput.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const results = join(root, 'test-results')
@@ -54,8 +55,7 @@ try {
   const started = Date.now()
   await runCommand('WPILib: Start Tool')
   await page.waitForSelector('.quick-input-list .monaco-list-row')
-  // Keys typed before the pick's input has focus are lost
-  await page.waitForSelector('.quick-input-box input:focus', { timeout: 10_000 })
+  await quickInputReady(page)
   await page.keyboard.type('RobotBuilder')
   await page.waitForSelector('.quick-input-list .monaco-list-row.focused[aria-label^="RobotBuilder"]')
   await page.keyboard.press('Enter')
@@ -138,8 +138,7 @@ try {
   // A new start copies the workspace again, so the saved robot is there to open.
   await runCommand('WPILib: Start Tool')
   await page.waitForSelector('.quick-input-list .monaco-list-row')
-  // Keys typed before the pick's input has focus are lost
-  await page.waitForSelector('.quick-input-box input:focus', { timeout: 10_000 })
+  await quickInputReady(page)
   await page.keyboard.type('RobotBuilder')
   await page.waitForSelector('.quick-input-list .monaco-list-row.focused[aria-label^="RobotBuilder"]')
   await page.keyboard.press('Enter')

@@ -1,0 +1,229 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new push to a pull request replaces its run. Master runs all finish: a canceled build saves no cache.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Which suite groups this pull request needs (scripts/ci-changes.sh); pushes and manual runs need all
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      groups: ${{ steps.pick.outputs.groups }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - id: pick
+        # bash adds pipefail, so a failing script fails the step despite tee
+        shell: bash
+        run: bash scripts/ci-changes.sh "$BASE" | tee -a "$GITHUB_OUTPUT"
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+
+  # Type checks and the tests that need no built runtime
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - id: install
+        run: pnpm install --frozen-lockfile
+      # Each check runs even when an earlier one failed, so one run lists every failure
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/ide typecheck
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/runtime typecheck
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/sim-gui typecheck
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/proxy test
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/ide test:year
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/ide test:security
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node apps/ide/tests/fileops.mjs
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node apps/ide/tests/ghcli.mjs
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node apps/ide/tests/copilotApi.mjs
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: node apps/ide/tests/wpilibDocs.mjs
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/runtime test:vendor
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/runtime test:gradle
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/runtime test:gversion
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/runtime test:logs
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/runtime test:project
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/runtime test:simhost
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/sim-gui test:protocol
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @frc-dev-wasm/wpigui-tools test:source
+
+  # Everything pnpm build:all makes. The cache keeps toolchains, sources and built runtime parts,
+  # so a warm run rebuilds only what changed. Runs on master too, to keep that cache warm for
+  # pull requests and releases.
+  build:
+    needs: changes
+    # A pull request that changes only docs or the proxy needs no build
+    if: github.event_name != 'pull_request' || needs.changes.outputs.groups != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    outputs:
+      cache-key: ${{ steps.key.outputs.key }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The inputs of the separately built parts; the suites restore the same key
+      - id: key
+        run: echo "key=build-${{ hashFiles('scripts/*.mjs', 'packages/wpigui-tools/*.mjs', 'packages/wpigui-tools/src/**', 'packages/wpigui-tools/patches/**', 'packages/wpigui-tools/targets/**', 'packages/vscode-wpilib/build.mjs', 'packages/vscode-wpilib/patches/**', 'packages/vscode-wpilib/replacements/**', 'packages/vscode-wpilib/shims/**', 'packages/java-web/build.mjs', 'packages/git-wasm/build.mjs', 'packages/git-wasm/config.mak', 'packages/git-wasm/patches/**', 'packages/git-wasm/src/pre.js', 'packages/git-wasm/src/library.js', 'packages/vscode-git/build.mjs', 'packages/vscode-git/shims/**', 'apps/ide/src/frc/terminal/utilities.ts') }}" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .cache
+            apps/ide/public/runtime
+          key: ${{ steps.key.outputs.key }}
+          restore-keys: build-
+      - run: pnpm build:all
+        env:
+          WPIGUI_JOBS: 4
+          TERMINAL_JOBS: 4
+          GIT_JOBS: 4
+      - run: bash scripts/check-dist.sh
+      # The nightly site is this build of master
+      - if: github.event_name == 'push'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site
+          path: apps/ide/dist
+          include-hidden-files: true
+          retention-days: 1
+
+  # Publishes this build of master to the R2 bucket behind frcdev-nightly.project516.dev
+  nightly:
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    # Holds the R2 key and runs only on master
+    environment: cloudflare
+    timeout-minutes: 30
+    concurrency:
+      group: nightly
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site
+          path: site
+      - run: sudo apt-get install -y -q rclone
+      # Uploads only the files whose checksum changed, so a push costs a few dozen R2 writes.
+      # Vite's content-hashed assets never change, so Cloudflare may cache them for good; every
+      # other file is revalidated, so a new nightly shows up at once.
+      # New assets first, then the pages that use them, then remove the old assets
+      - run: |
+          rclone copy site/assets r2:frcdev-nightly/assets --checksum --header-upload 'Cache-Control: public, max-age=31536000, immutable'
+          rclone sync site r2:frcdev-nightly --checksum --exclude '/assets/**' --header-upload 'Cache-Control: no-cache'
+          rclone sync site/assets r2:frcdev-nightly/assets --checksum --header-upload 'Cache-Control: public, max-age=31536000, immutable'
+        env:
+          RCLONE_CONFIG_R2_TYPE: s3
+          RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+          RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          RCLONE_CONFIG_R2_NO_CHECK_BUCKET: 'true'
+
+  # The browser and Java suites, in three groups of about the same length
+  suites:
+    if: github.event_name != 'push' && needs.changes.outputs.groups != '[]'
+    # A failed check stops the hour of suites
+    needs: [changes, checks, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        group: ${{ fromJSON(needs.changes.outputs.groups) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .cache
+            apps/ide/public/runtime
+          key: ${{ needs.build.outputs.cache-key }}
+          restore-keys: build-
+      # Brings the restored outputs up to date with this commit
+      - run: pnpm build:all
+        env:
+          WPIGUI_JOBS: 4
+          TERMINAL_JOBS: 4
+          GIT_JOBS: 4
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: playwright-
+      # Downloads the browser only when the cache lacks this Playwright's build
+      - run: pnpm --filter @frc-dev-wasm/ide exec playwright-core install --with-deps chromium-headless-shell
+      # The test browsers reach the proxy at CI's own address (scripts/ci-proxy.mjs), kept out of the logs
+      - name: Run the ${{ matrix.group }} suites
+        id: suites
+        # Real team projects depend on outside servers and runner load, so their results do not fail the run
+        continue-on-error: ${{ matrix.group == 'teams' }}
+        run: |
+          [ -z "$CI_PROXY_URL" ] || echo "::add-mask::${CI_PROXY_URL#https://}"
+          bash scripts/ci-suites.sh "$GROUP"
+        env:
+          GROUP: ${{ matrix.group }}
+          CI_PROXY_URL: ${{ secrets.CI_PROXY_URL }}
+          NODE_OPTIONS: --import ${{ github.workspace }}/scripts/ci-proxy.mjs
+      - if: failure() || steps.suites.outcome == 'failure'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-results-${{ matrix.group }}
+          path: |
+            apps/ide/test-results
+            packages/*/test-results
+          if-no-files-found: ignore
+          retention-days: 7

@@ -22,7 +22,7 @@ function projectFiles(dir) {
   return files;
 }
 const names = process.argv.slice(2);
-const all = ['nt4Server', 'nt4RobotOnly', 'robotStartupFailure', 'compileTemplate', 'simulateTemplate', 'simulateVendors', 'simulateMaven', 'simulatePhoenixMotion', 'simulateOverrun', 'simulateDogLog', 'smartDashboardClient'];
+const all = ['nt4Server', 'nt4RobotOnly', 'robotStartupFailure', 'compileTemplate', 'simulateTemplate', 'simulateVendors', 'simulateMaven', 'simulatePhoenixMotion', 'simulateOverrun', 'simulateDogLog'];
 
 const server = await createServer({
   root: path.resolve(here, '..'),

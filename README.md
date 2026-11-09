@@ -28,6 +28,10 @@ it, deploy your own and set `wpilib.vendorProxy` to its address, which moves git
 library downloads to it. See [docs/git.md](docs/git.md).
 See [docs/known-limits.md](docs/known-limits.md) for what does not work yet.
 
+That site follows releases. [frcdev-nightly.project516.dev](https://frcdev-nightly.project516.dev) is built from
+`master` after every merge, to try a fix before it is released. It can break, and Help: About shows its
+version with `-nightly`. Each site keeps its own projects in browser storage.
+
 ## Development
 
 Requirements: Node 26 or newer and pnpm. The setup script downloads the JDK of each season

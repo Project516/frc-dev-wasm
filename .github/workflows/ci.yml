@@ -172,6 +172,8 @@ jobs:
     needs: [changes, checks, build]
     runs-on: ubuntu-latest
     timeout-minutes: 180
+    # Real team projects depend on outside servers and runner load, so their results do not fail the run
+    continue-on-error: ${{ matrix.group == 'teams' }}
     strategy:
       fail-fast: false
       matrix:

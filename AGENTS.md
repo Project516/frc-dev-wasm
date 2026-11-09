@@ -407,7 +407,7 @@ comes later. 2027 runs on java-web (Java 25), 2026 on CheerpJ (Java 17).
   separately built part. `.github/workflows/deploy-proxy.yml` deploys the proxy Worker when its code changes.
 - CI: `.github/workflows/ci.yml` runs the type checks and Node-only tests, then `pnpm build:all`
   with the same cache, then the suites in three parallel groups (`scripts/ci-suites.sh ide|java|teams`)
-  on each pull request. `scripts/ci-changes.sh` picks the groups from the changed files: a pull request
+  on each pull request. The `teams` group (real team projects) reports without failing the run. `scripts/ci-changes.sh` picks the groups from the changed files: a pull request
   that changes only docs or the proxy builds nothing, and a file no rule names runs every group. CI reaches the proxy at
   its own address, the `CI_PROXY_URL` secret: `scripts/ci-proxy.mjs` (loaded with `NODE_OPTIONS=--import`) sends
   the test browsers' proxy requests there, and pull requests from forks, which get no secrets, can fail on

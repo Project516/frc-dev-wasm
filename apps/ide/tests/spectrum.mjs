@@ -213,7 +213,7 @@ try {
     window.frcDevWasmSim.send({ type: 'Joystick', device: '0', data: { '>axes': [0, 0, 0], '>buttons': [], '>povs': [] } })
     window.frcDevWasmSim.send({ type: 'DriverStation', device: '', data: { '>new_data': true } })
   })
-  check('the robot drives 0.25 m within 60 s', reached, 'the Field2d pose did not move that far; the next check has the diagnostics')
+  check('the robot drives 0.25 m within 60 s', reached, reached ? '' : 'the Field2d pose did not move that far; the next check has the diagnostics')
   const during = await robotPoses()
   // Whichever pose topic moved the most: teams name them differently.
   const moves = Object.keys(during).map((name) => [name, before[name] ? Math.hypot(during[name][0] - before[name][0], during[name][1] - before[name][1]) : 0])

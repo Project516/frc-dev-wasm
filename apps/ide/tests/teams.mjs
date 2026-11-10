@@ -316,7 +316,11 @@ async function runRepo(repo) {
         },
         () => new Promise(() => {})
       )
-      await Promise.race([buildGradle.waitFor({ timeout: 600_000 }), projectRoot.waitFor({ timeout: 600_000 }), refused])
+      await Promise.race([buildGradle.waitFor({ timeout: 600_000 }), projectRoot.waitFor({ timeout: 600_000 }), refused]).catch(async (error) => {
+        if (!error.name?.includes('Timeout')) throw error
+        const shown = async (selector) => (await page.locator(selector).allInnerTexts()).join(' | ').replace(/\s+/g, ' ').slice(0, 300) || 'none'
+        throw new Error(`no project after 600 s. Requests in flight: ${[...pending].join(' ') || 'none'}. Input box: ${await shown('.quick-input-widget:not([style*="display: none"])')}. Notifications: ${await shown('.notifications-toasts .notification-list-item')}. Status bar: ${await shown('.statusbar-item')}`)
+      })
       if (!(await buildGradle.isVisible())) await projectRoot.click()
       await buildGradle.waitFor({ timeout: 60_000 })
       await waitForWorkbench()

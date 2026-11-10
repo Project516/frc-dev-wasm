@@ -194,3 +194,27 @@ export async function buildCode(page, timeout = 300_000) {
     { timeout }
   )
 }
+
+const shellScreen = (page) =>
+  page.locator('.terminal-wrapper:visible .xterm-rows').first().innerText({ timeout: 5000 }).catch(() => '')
+
+// Runs a command in a new FRC Shell and returns its output once the prompt is back
+export async function shell(page, command, timeout = 240_000) {
+  await runCommand(page, 'Terminal: Create New Terminal')
+  // A task terminal that opens meanwhile can take the focus
+  await page.locator('.terminal-tabs-entry', { hasText: 'FRC Shell' }).last().click({ timeout: 5000 }).catch(() => {})
+  await page.waitForFunction(() => /frc:\S*\$\s*$/.test([...document.querySelectorAll('.terminal-wrapper')].find((w) => w.offsetParent)?.querySelector('.xterm-rows')?.innerText ?? ''), undefined, { timeout: 120_000 })
+  await page.waitForFunction(() => {
+    const input = [...document.querySelectorAll('.terminal-wrapper')].find((w) => w.offsetParent)?.querySelector('.xterm-helper-textarea')
+    input?.focus()
+    return !!input && document.activeElement === input
+  }, undefined, { timeout: 10_000 })
+  await page.keyboard.type(command, { delay: 4 })
+  await page.keyboard.press('Enter')
+  for (const start = Date.now(); Date.now() - start < timeout; await page.waitForTimeout(200)) {
+    const text = await shellScreen(page)
+    const output = text.slice(text.lastIndexOf(command) + command.length)
+    if (/frc:\S*\$\s*$/.test(output) && output.includes('\n')) return output.replace(/frc:\S*\$\s*$/, '').trim()
+  }
+  throw new Error(`no prompt after ${command}`)
+}

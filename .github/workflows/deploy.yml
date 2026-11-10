@@ -37,11 +37,15 @@ jobs:
           key: build-${{ hashFiles('scripts/*.mjs', 'packages/wpigui-tools/*.mjs', 'packages/wpigui-tools/src/**', 'packages/wpigui-tools/patches/**', 'packages/wpigui-tools/targets/**', 'packages/vscode-wpilib/build.mjs', 'packages/vscode-wpilib/patches/**', 'packages/vscode-wpilib/replacements/**', 'packages/vscode-wpilib/shims/**', 'packages/java-web/build.mjs', 'packages/git-wasm/build.mjs', 'packages/git-wasm/config.mak', 'packages/git-wasm/patches/**', 'packages/git-wasm/src/pre.js', 'packages/git-wasm/src/library.js', 'packages/vscode-git/build.mjs', 'packages/vscode-git/shims/**', 'apps/ide/src/frc/terminal/utilities.ts') }}
           restore-keys: build-
 
-      - run: pnpm build:all
+      # fetch-deps falls back to the proxy at CI's own address, kept out of the logs
+      - run: |
+          [ -z "$CI_PROXY_URL" ] || echo "::add-mask::${CI_PROXY_URL#https://}"
+          pnpm build:all
         env:
           WPIGUI_JOBS: 4
           TERMINAL_JOBS: 4
           GIT_JOBS: 4
+          CI_PROXY_URL: ${{ secrets.CI_PROXY_URL }}
       - run: bash scripts/check-dist.sh
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:

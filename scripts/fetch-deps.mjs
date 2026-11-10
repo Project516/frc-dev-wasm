@@ -152,8 +152,9 @@ function mavenUrl({ repo, group, artifact, version, ext = 'jar' }, classifier) {
 class Missing extends Error {}
 
 // Some vendor servers refuse connections from cloud CI runners. The IDE's proxy serves the same
-// maven repositories, so a file their server never answers for is fetched through it.
-const PROXY = 'https://frc-proxy.project516.dev/maven/';
+// maven repositories, so a file their server never answers for is fetched through it. CI reaches the
+// proxy at its own address, CI_PROXY_URL.
+const PROXY = `${process.env.CI_PROXY_URL?.replace(/\/$/, '') || 'https://frc-proxy.project516.dev'}/maven/`;
 
 async function get(url, read, init) {
   for (let attempt = 1; ; attempt++) {

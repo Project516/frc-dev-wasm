@@ -134,7 +134,7 @@ async function project(name, base, { opModeRobot = false, epilogue = false, draw
   check(`${name}: created from ${base}, opened and built the first time`, text.includes('BUILD SUCCESSFUL'), JSON.stringify(text.slice(-400)))
   console.log(`time ${name}: create and open ${((opened - started) / 1000).toFixed(1)} s, first build ${(firstBuild / 1000).toFixed(1)} s`)
   const afterOpen = requested.filter((r) => r.at >= started)
-  check(`${name}: the JVM is java-web, not CheerpJ`, afterOpen.some((r) => r.url.endsWith('/runtime/java-web/java-web.js')) && !afterOpen.some((r) => r.url.includes('cjrtnc.leaningtech.com')))
+  check(`${name}: the JVM is java-web, not CheerpJ`, afterOpen.some((r) => r.url.endsWith('/runtime/java-web/java-web.js')) && !afterOpen.some((r) => new URL(r.url).hostname === 'cjrtnc.leaningtech.com'))
 
   let build = Date.now()
   await buildCode(page, 300_000)

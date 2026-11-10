@@ -8,6 +8,6 @@
     "test": "node --expose-gc test/frc.mjs"
   },
   "dependencies": {
-    "@project516/java-web": "0.1.1"
+    "@project516/java-web": "0.1.3"
   }
 }

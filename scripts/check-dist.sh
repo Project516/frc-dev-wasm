@@ -13,7 +13,7 @@ case "$head" in *-dirty) echo "the working tree has uncommitted changes" >&2; ex
 
 years=$(cd "$root" && node -e "import('./packages/runtime/src/years.ts').then((m) => console.log(m.WPILIB_YEARS.join(' ')))")
 java_web_years=$(cd "$root" && node -e "import('./packages/runtime/src/years.ts').then((m) => console.log(m.WPILIB_YEARS.filter((y) => m.JAVA_WEB_YEARS.includes(y)).join(' ')))")
-java_web_files=$([ -z "$java_web_years" ] || echo runtime/java-web/java-web.js runtime/java-web/java-web-worker.js runtime/java-web/boot.pack runtime/java-web/jdk/java.base.jar runtime/java-web/jdk/javac.pack)
+java_web_files=$([ -z "$java_web_years" ] || echo runtime/java-web/java-web.js runtime/java-web/java-web-worker.js runtime/java-web/boot.pack runtime/java-web/jdk/image.jar runtime/java-web/jdk/app.pack runtime/java-web/jdk/javac.pack)
 season_files=$(for year in $years; do echo "runtime/$year/manifest.json runtime/$year/frcdevwasm-shim.jar runtime/$year/frcdevwasm-tools.jar runtime/$year/vscode-wpilib/dist/browser/extension.js runtime/$year/tools/elastic/index.html"; for tool in glass outlineviewer datalogtool sysid simgui; do echo "runtime/$year/tools/$tool/index.wasm"; done; done)
 for file in $season_files $java_web_files runtime/terminal/coreutils.wasm runtime/git/git.wasm runtime/vscode-git/git/dist/browser/extension.js \
   runtime/tools/advantagescope/index.html runtime/tools/robotbuilder/RobotBuilder.jar runtime/tools/smartdashboard/SmartDashboard.jar; do

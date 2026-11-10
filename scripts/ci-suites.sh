@@ -45,6 +45,8 @@ case "${1:?group: ide, java, java-browser or teams}" in
     run env WPILIB_YEAR=2027 pnpm --filter @frc-dev-wasm/runtime test
     run pnpm --filter @frc-dev-wasm/java-web test
     run pnpm --filter @frc-dev-wasm/git-wasm test
+    # Here .cache has each season's vendordeps, so the proxy test also checks that it lists every marketplace repository
+    run pnpm --filter @frc-dev-wasm/proxy test
     ;;
   java-browser)
     run pnpm --filter @frc-dev-wasm/ide test:2027

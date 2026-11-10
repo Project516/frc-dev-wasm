@@ -78,7 +78,10 @@ const SEASONS = {
       gaps: [
         // As on the desktop: Constants.getMode() gives REPLAY for a simulated competition robot, and AdvantageKit's
         // LogFileUtil.findReplayLog asks for a path on standard input unless AKIT_LOG_PATH is set
-        { name: 'AdvantageKit replay prompt', stage: 'simulate start', match: /Enter path to file/ }
+        { name: 'AdvantageKit replay prompt', stage: 'simulate start', match: /Enter path to file/ },
+        // The team's own race: LEDs() starts a 20 ms Notifier that writes LEDsRIO's buffer, which LEDsRIO sets only
+        // after that constructor returns. When the constructor takes longer than 20 ms, the first callback finds null.
+        { name: 'LED buffer race', stage: 'simulate start', match: /LEDsRIO\.setLEDBuffer.*NullPointerException/ }
       ]
     },
     {

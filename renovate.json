@@ -8,6 +8,11 @@
   "rangeStrategy": "pin",
   "packageRules": [
     {
+      "description": "Node stays a range: the project supports any Node 26 or newer (engines), and .nvmrc names the major",
+      "matchDepNames": ["node"],
+      "rangeStrategy": "auto"
+    },
+    {
       "description": "The VS Code workbench packages release together and must stay on one version",
       "groupName": "VS Code workbench",
       "matchPackageNames": ["@codingame/**", "monaco-editor", "vscode"]

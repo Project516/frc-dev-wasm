@@ -166,17 +166,21 @@ jobs:
         with:
           name: site
           path: site
-      - run: sudo apt-get install -y -q rclone
+      # Ubuntu's rclone (1.60) reports R2 uploads that succeed as NotImplemented failures and retries them
+      - name: Install rclone 1.76.0
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/rclone.zip" https://github.com/rclone/rclone/releases/download/v1.76.0/rclone-v1.76.0-linux-amd64.zip
+          echo "b00f00b3266c3764413afe599d3ec316f6f43b3e0ea8a0bc1d186d2133e46df7  $RUNNER_TEMP/rclone.zip" | sha256sum -c -
+          unzip -q -j "$RUNNER_TEMP/rclone.zip" '*/rclone' -d "$RUNNER_TEMP/bin"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
       # Uploads only the files whose checksum changed, so a push costs a few dozen R2 writes.
       # Vite's content-hashed assets never change, so Cloudflare may cache them for good; every
       # other file is revalidated, so a new nightly shows up at once.
-      # New assets first, then the pages that use them, then remove the old assets.
-      # A file with the same checksum is left alone: rclone would otherwise set its newer modtime by copying the
-      # object onto itself, which R2 answers with NotImplemented. -v lists each upload.
+      # New assets first, then the pages that use them, then remove the old assets. -v lists each upload.
       - run: |
-          rclone copy site/assets r2:frcdev-nightly/assets -v --checksum --no-update-modtime --header-upload 'Cache-Control: public, max-age=31536000, immutable'
-          rclone sync site r2:frcdev-nightly -v --checksum --no-update-modtime --exclude '/assets/**' --header-upload 'Cache-Control: no-cache'
-          rclone sync site/assets r2:frcdev-nightly/assets -v --checksum --no-update-modtime --header-upload 'Cache-Control: public, max-age=31536000, immutable'
+          rclone copy site/assets r2:frcdev-nightly/assets -v --checksum --header-upload 'Cache-Control: public, max-age=31536000, immutable'
+          rclone sync site r2:frcdev-nightly -v --checksum --exclude '/assets/**' --header-upload 'Cache-Control: no-cache'
+          rclone sync site/assets r2:frcdev-nightly/assets -v --checksum --header-upload 'Cache-Control: public, max-age=31536000, immutable'
         env:
           RCLONE_CONFIG_R2_TYPE: s3
           RCLONE_CONFIG_R2_PROVIDER: Cloudflare

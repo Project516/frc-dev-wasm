@@ -8,6 +8,7 @@ import path from 'node:path';
 import { unzipSync, zipSync } from 'fflate';
 import { pomDependencies } from '../packages/runtime/src/pom.ts';
 import { WPILIB_YEARS } from '../packages/runtime/src/years.ts';
+import { patchLombok } from './patch-lombok.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const CACHE = path.join(ROOT, '.cache');
@@ -18,6 +19,8 @@ const FRC_MAVEN = 'https://frcmaven.wpi.edu/artifactory/release';
 const CENTRAL = 'https://repo1.maven.org/maven2';
 
 const central = (group, artifact, version) => ({ repo: CENTRAL, group, artifact, version });
+
+const LOMBOK = central('org.projectlombok', 'lombok', '1.18.48');
 
 // One entry per year in WPILIB_YEARS.
 const SEASONS = {
@@ -53,7 +56,7 @@ const SEASONS = {
       // Field images and their JSON configs, for the Sim GUI field view.
       fieldImages: wpi('fieldImages', 'fieldImages-java'),
       // Annotation processors that robot projects commonly declare in build.gradle.
-      processors: [wpi('epilogue', 'epilogue-processor-java'), central('org.projectlombok', 'lombok', '1.18.48')],
+      processors: [wpi('epilogue', 'epilogue-processor-java'), LOMBOK],
       // The vendor library list the WPILib VS Code extension offers (wpilibsuite/vendor-json-repo).
       marketplace: 'https://frcmaven.wpi.edu/artifactory/vendordeps/vendordep-marketplace/2026.json',
       // WPILib vendordeps whose jars share the WPILib version.
@@ -101,7 +104,7 @@ const SEASONS = {
         { ...wpi('epilogue'), artifact: 'epilogue-processor-java' },
         { repo: FRC_MAVEN, group: 'org.wpilib', artifact: 'javac-plugin-java', version },
         central('io.avaje', 'avaje-jsonb-generator', '3.14'),
-        central('org.projectlombok', 'lombok', '1.18.48'),
+        LOMBOK,
       ],
       marketplace: 'https://frcmaven.wpi.edu/artifactory/vendordeps/vendordep-marketplace/2027_alpha7.json',
       // Commands are vendordeps in 2027 and share the WPILib version, like the Romi and XRP libraries.
@@ -343,6 +346,15 @@ async function vendordepList(season) {
   return items;
 }
 
+// Lombok's @ExtensionMethod attributes the enclosing member again for every call it checks, which is quadratic
+// in a browser build. The patch is upstream's fix (scripts/lombok); drop it once a lombok release has it.
+async function lombokWithFix(season, jar) {
+  const sources = await download(mavenUrl(LOMBOK, 'sources'), path.join(season.cache, 'sources', path.basename(mavenUrl(LOMBOK, 'sources'))), true);
+  const dest = path.join(season.cache, 'lombok', `lombok-${LOMBOK.version}-patched.jar`);
+  patchLombok({ version: LOMBOK.version, jar, sourcesJar: sources, jdk: season.jdk, javaHome: season.javaHome, dest, workDir: path.join(season.cache, 'lombok', 'work') });
+  return dest;
+}
+
 // The site serves only what it may redistribute: the vendordep descriptions, the WPILib vendordep jars
 // and the annotation processors. Everything else is downloaded by the browser from the vendor.
 async function fetchVendorLibraries(season) {
@@ -377,21 +389,25 @@ async function fetchVendorLibraries(season) {
   const older = [];
   for (const jar of season.olderVendorJars ?? []) older.push(await mirror(season, jar, [jar.repo, CENTRAL], maven));
   const bundled = {};
-  const bundle = (key) => {
+  const bundle = async (key) => {
     const entry = maven[key];
     if (!entry || key in bundled) return;
-    const dest = `bundled/${path.basename(entry.jar)}`;
+    const patched = key === coord(LOMBOK) ? await lombokWithFix(season, path.join(vendorRaw, entry.jar)) : undefined;
+    const source = patched ?? path.join(vendorRaw, entry.jar);
+    const dest = `bundled/${path.basename(source)}`;
     fs.mkdirSync(path.join(runtime, 'bundled'), { recursive: true });
-    fs.copyFileSync(path.join(vendorRaw, entry.jar), path.join(runtime, dest));
+    // The name differs from the release's, so a cached build or HTTP response of the stock jar is not reused
+    if (patched) fs.rmSync(path.join(runtime, 'bundled', path.basename(entry.jar)), { force: true });
+    fs.copyFileSync(source, path.join(runtime, dest));
     bundled[key] = { jar: dest, deps: entry.deps };
-    entry.deps.forEach(bundle);
+    for (const dep of entry.deps) await bundle(dep);
   };
   for (const jar of season.jars.filter((j) => j.optional)) bundled[coord(jar)] = { jar: `lib/${path.basename(mavenUrl(jar))}`, deps: [] };
-  for (const jar of season.wpilibVendorJars) bundle(await mirror(season, jar, [jar.repo], maven));
+  for (const jar of season.wpilibVendorJars) await bundle(await mirror(season, jar, [jar.repo], maven));
   const processors = {};
   for (const p of season.processors) {
     processors[`${p.group}:${p.artifact}`] = await mirror(season, p, [p.repo, CENTRAL], maven);
-    bundle(processors[`${p.group}:${p.artifact}`]);
+    await bundle(processors[`${p.group}:${p.artifact}`]);
   }
   for (const key of Object.keys(maven)) if (maven[key] === null) delete maven[key];
   // Dependencies of the libraries above, so a build offline can still find a library's own dependencies
@@ -465,6 +481,7 @@ async function fetchSeason(year) {
     // Already on every robot classpath; vendor copies of these would clash.
     provided: new Set(config.jars.filter((j) => !j.optional).map((j) => `${j.group}:${j.artifact}`)),
   };
+  season.javaHome = await fetchJdk(season.jdk);
   const { runtime } = season;
   fs.mkdirSync(path.join(runtime, 'lib'), { recursive: true });
 
@@ -489,12 +506,10 @@ async function fetchSeason(year) {
   await fetchElastic(season);
   for (const tool of season.swingTools ?? []) await download(tool.url, path.join(RUNTIME, 'tools', tool.dest), true);
 
-  const javaHome = await fetchJdk(season.jdk);
-
   const provided = [...season.provided];
   fs.writeFileSync(path.join(runtime, 'manifest.json'), `${JSON.stringify({ wpilib: season.version, jdk: season.jdk, classpath, optional, provided }, null, 2)}\n`);
-  fs.writeFileSync(path.join(cache, 'java-home'), javaHome);
-  console.log(`WPILib ${season.version} with ${season.jdk} at ${javaHome}`);
+  fs.writeFileSync(path.join(cache, 'java-home'), season.javaHome);
+  console.log(`WPILib ${season.version} with ${season.jdk} at ${season.javaHome}`);
 }
 
 function selectedYears() {

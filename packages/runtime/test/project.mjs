@@ -124,8 +124,8 @@ for (const [year, season] of Object.entries(SEASONS)) {
     assert.deepEqual(await processors(''), []);
     assert.deepEqual(await processors('annotationProcessor wpi.java.deps.wpilibAnnotations()'), season.processors(version));
     assert.deepEqual(await processors(`annotationProcessor "${epilogue}:${version}"`), [`epilogue-processor-java-${version}.jar`]);
-    assert.deepEqual(await processors(`compileOnly 'org.projectlombok:lombok:1.18.48'\nannotationProcessor 'org.projectlombok:lombok:1.18.48'`), ['lombok-1.18.48.jar']);
-    assert.deepEqual(await processors('', '  id "io.freefair.lombok" version "8.6"\n'), ['lombok-1.18.48.jar']);
+    assert.deepEqual(await processors(`compileOnly 'org.projectlombok:lombok:1.18.48'\nannotationProcessor 'org.projectlombok:lombok:1.18.48'`), ['lombok-1.18.48-patched.jar']);
+    assert.deepEqual(await processors('', '  id "io.freefair.lombok" version "8.6"\n'), ['lombok-1.18.48-patched.jar']);
     // Explicit and implied together name each jar once
     assert.deepEqual(await processors(`annotationProcessor wpi.java.deps.wpilibAnnotations()\nannotationProcessor "${epilogue}:${version}"`), season.processors(version));
   });

@@ -13,9 +13,9 @@
     "test:protocol": "node test/protocol.mjs"
   },
   "dependencies": {
-    "@preact/signals": "^2.11.4",
-    "fflate": "^0.8.3",
-    "preact": "^11.2.0"
+    "@preact/signals": "2.11.4",
+    "fflate": "0.8.3",
+    "preact": "11.2.0"
   },
   "devDependencies": {
     "@frc-dev-wasm/runtime": "workspace:*",

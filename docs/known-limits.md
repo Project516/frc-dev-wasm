@@ -56,7 +56,9 @@ What the browser IDE does not do yet, or does differently from the desktop WPILi
 
 - The first build in a window starts the Java compiler, which takes longest. Later builds are faster, and a build
   with no changes since the last one reuses its classes, as Gradle does.
-- Lombok's `@ExtensionMethod` makes builds much slower than on the desktop: Lombok checks the whole method again for
-  each method call in a class that uses it. A team project that uses it in 8 files takes more than 20 minutes to build.
+- Lombok's `@ExtensionMethod` still makes builds slower than on the desktop: Lombok checks the enclosing method for
+  each method call in a class that uses it, and the browser JVM is slow at that. The site serves a lombok jar with
+  upstream's fix for the worst of it (projectlombok/lombok#4103, not released yet). A team project that uses
+  `@ExtensionMethod` in 8 files builds in about 200 seconds with it, and took 840 to 950 seconds without.
 - 2027 compiles on java-web are slower and use more memory than 2026 ones: a large team project takes close to a
   minute and more than 1 GB on a laptop.

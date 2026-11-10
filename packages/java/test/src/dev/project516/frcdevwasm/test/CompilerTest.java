@@ -24,6 +24,7 @@ import java.util.zip.ZipOutputStream;
 /** Tests for {@link Compiler}, run on the desktop JDK. */
 public final class CompilerTest {
   private static final ObjectMapper JSON = new ObjectMapper();
+  private static final String PATCHED_LOMBOK = "lombok-1.18.48-patched.jar";
 
   private CompilerTest() {}
 
@@ -35,6 +36,7 @@ public final class CompilerTest {
     t.test("compiler: compiles against WPILib jars", CompilerTest::againstWpilib);
     t.test("compiler: JSON escapes quotes, newlines and unicode", CompilerTest::jsonEscaping);
     t.test("compiler: Lombok generates getters", CompilerTest::lombok);
+    t.test("compiler: patched Lombok compiles @ExtensionMethod like the release, faster", CompilerTest::extensionMethod);
     t.test("compiler: Epilogue generates logger classes", CompilerTest::epilogue);
     t.test("compiler: processors can resolve Filer resource URIs to paths", CompilerTest::processorResolvesPaths);
     t.test("compiler: bad zip path is an error diagnostic", CompilerTest::badZip);
@@ -213,6 +215,57 @@ public final class CompilerTest {
     }
   }
 
+  private static void extensionMethod() throws Exception {
+    int calls = 400;
+    StringBuilder body = new StringBuilder();
+    for (int i = 0; i < calls; i++) {
+      body.append("    total += Integer.toString(").append(i).append(").length();\n");
+    }
+    Path dir = Files.createTempDirectory("compilertest");
+    try {
+      Path zip = zip(dir, "demo/Slow.java", "package demo;\n"
+          + "@lombok.experimental.ExtensionMethod(Extensions.class)\n"
+          + "public class Slow {\n"
+          + "  int run() {\n    int total = 0;\n" + body + "    return total;\n  }\n"
+          + "  String replaced(java.util.List<String> names) {\n"
+          + "    String first = names.first();\n"
+          + "    return first.shout().trim().shout() + names.first().shout() + Integer.toString(1).length();\n"
+          + "  }\n"
+          + "}\n", "demo/Extensions.java", "package demo;\n"
+          + "class Extensions {\n"
+          + "  public static int length(String s) { return s.length(); }\n"
+          + "  public static String shout(String s) { return s.toUpperCase(); }\n"
+          + "  public static <T> T first(java.util.List<T> list) { return list.get(0); }\n"
+          + "}\n");
+      Path releaseJar = Path.of(System.getProperty("frcdevwasm.vendor"), "m2/org/projectlombok/lombok/1.18.48/lombok-1.18.48.jar");
+      Path patchedJar = Path.of(System.getProperty("frcdevwasm.runtime"), "bundled", PATCHED_LOMBOK);
+      // The patched jar goes first, so it carries the warm-up of the JVM
+      long start = System.nanoTime();
+      Path patchedOut = dir.resolve("patched.jar");
+      JsonNode patched = compile(zip, patchedJar.toString(), patchedJar.toString(), patchedOut);
+      long patchedMillis = (System.nanoTime() - start) / 1_000_000;
+      start = System.nanoTime();
+      Path releaseOut = dir.resolve("release.jar");
+      JsonNode release = compile(zip, releaseJar.toString(), releaseJar.toString(), releaseOut);
+      long releaseMillis = (System.nanoTime() - start) / 1_000_000;
+      eq(true, patched.get("success").asBoolean(), patched.toString());
+      eq(true, release.get("success").asBoolean(), release.toString());
+      for (String name : new String[] {"demo/Slow.class", "demo/Extensions.class"}) {
+        eq(entry(releaseOut, name), entry(patchedOut, name), name + " in the output of the patched jar");
+      }
+      System.out.printf("  @ExtensionMethod, %d calls: release %d ms, patched %d ms%n", calls, releaseMillis, patchedMillis);
+      check(patchedMillis < releaseMillis, "patched " + patchedMillis + " ms, release " + releaseMillis + " ms");
+    } finally {
+      delete(dir);
+    }
+  }
+
+  private static String entry(Path jar, String name) throws IOException {
+    try (JarFile jf = new JarFile(jar.toFile())) {
+      return java.util.HexFormat.of().formatHex(jf.getInputStream(jf.getEntry(name)).readAllBytes());
+    }
+  }
+
   private static void epilogue() throws Exception {
     Path dir = Files.createTempDirectory("compilertest");
     try {
@@ -323,7 +376,7 @@ public final class CompilerTest {
   private static String processorClasspath() throws IOException {
     Path bundled = Path.of(System.getProperty("frcdevwasm.runtime"), "bundled");
     return wpilibClasspath()
-        + ":" + bundled.resolve("lombok-1.18.48.jar")
+        + ":" + bundled.resolve(PATCHED_LOMBOK)
         + ":" + bundled.resolve("epilogue-processor-java-2026.2.1.jar");
   }
 

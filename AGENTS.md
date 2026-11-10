@@ -334,7 +334,11 @@ comes later. 2027 runs on java-web (Java 25), 2026 on CheerpJ (Java 17).
   season, checksum pinned). In 2027, CameraServer, cscore, AprilTag and OpenCV are vendordeps, as in
   GradleRIO: their jars (`optional` in `manifest.json`) stay off the robot classpath, are served from
   `lib/`, and `bundled` in `vendor/index.json` points a project's vendordep at them. The shim build
-  uses them. No vendor jar is served. `pnpm build:java` (also
+  uses them. No vendor jar is served. The lombok jar is patched with upstream's fix for `@ExtensionMethod`
+  (projectlombok/lombok#4103, which makes builds quadratic) until a release has it: `scripts/patch-lombok.mjs`
+  recompiles `HandleExtensionMethod` from lombok's sources with `scripts/lombok/lombok-<version>-extension-method.patch`
+  and serves the result as `bundled/lombok-<version>-patched.jar`. On a lombok bump `fetch-deps` fails until the patch
+  is made again for the new version, or, when the release has the fix, the step is removed. `pnpm build:java` (also
   `--year`) then writes the shim jar, the tools jar and `vendor/transform.json`
   there. Shared files (tools, git, terminal, extensions) stay in `runtime/`.
   Outputs go to `.cache/` and `apps/ide/public/runtime/`, both ignored by git.

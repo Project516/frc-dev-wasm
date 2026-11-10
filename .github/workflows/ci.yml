@@ -170,11 +170,13 @@ jobs:
       # Uploads only the files whose checksum changed, so a push costs a few dozen R2 writes.
       # Vite's content-hashed assets never change, so Cloudflare may cache them for good; every
       # other file is revalidated, so a new nightly shows up at once.
-      # New assets first, then the pages that use them, then remove the old assets
+      # New assets first, then the pages that use them, then remove the old assets.
+      # A file with the same checksum is left alone: rclone would otherwise set its newer modtime by copying the
+      # object onto itself, which R2 answers with NotImplemented. -v lists each upload.
       - run: |
-          rclone copy site/assets r2:frcdev-nightly/assets --checksum --header-upload 'Cache-Control: public, max-age=31536000, immutable'
-          rclone sync site r2:frcdev-nightly --checksum --exclude '/assets/**' --header-upload 'Cache-Control: no-cache'
-          rclone sync site/assets r2:frcdev-nightly/assets --checksum --header-upload 'Cache-Control: public, max-age=31536000, immutable'
+          rclone copy site/assets r2:frcdev-nightly/assets -v --checksum --no-update-modtime --header-upload 'Cache-Control: public, max-age=31536000, immutable'
+          rclone sync site r2:frcdev-nightly -v --checksum --no-update-modtime --exclude '/assets/**' --header-upload 'Cache-Control: no-cache'
+          rclone sync site/assets r2:frcdev-nightly/assets -v --checksum --no-update-modtime --header-upload 'Cache-Control: public, max-age=31536000, immutable'
         env:
           RCLONE_CONFIG_R2_TYPE: s3
           RCLONE_CONFIG_R2_PROVIDER: Cloudflare

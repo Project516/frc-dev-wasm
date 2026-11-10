@@ -7,7 +7,15 @@ export interface PomDependency {
   version: string;
 }
 
-const uncommented = (xml: string) => xml.replace(/<!--[\s\S]*?-->/g, '');
+// Repeated, so a comment that the removal of another one completes is removed too
+const uncommented = (xml: string) => {
+  let previous;
+  do {
+    previous = xml;
+    xml = xml.replace(/<!--[\s\S]*?-->/g, '');
+  } while (xml !== previous);
+  return xml;
+};
 const field = (xml: string, tag: string) => new RegExp(`<${tag}>([^<]*)</${tag}>`).exec(xml)?.[1].trim();
 // What belongs to other poms or to the build, and not to this pom's own coordinates and dependencies
 const OTHER = /<(parent|build|profiles|reporting)>[\s\S]*?<\/\1>/g;

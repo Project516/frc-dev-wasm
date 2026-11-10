@@ -385,8 +385,8 @@ importers:
   packages/java-web:
     dependencies:
       '@project516/java-web':
-        specifier: 0.1.1
-        version: 0.1.1
+        specifier: 0.1.3
+        version: 0.1.3
 
   packages/proxy: {}
 
@@ -836,8 +836,8 @@ packages:
     peerDependencies:
       preact: '>= 10.25.0 || >=11.0.0-0'
 
-  '@project516/java-web@0.1.1':
-    resolution: {integrity: sha512-c2LPzB3cTHeq0mnGLePu81til9l+4ncVMsrMBlpG8CbqDN6/rLm/mR+awJxmWx+fZXKbAAQb1CnSZBvoIuTlhg==}
+  '@project516/java-web@0.1.3':
+    resolution: {integrity: sha512-nIJXir/IoRPayAKjR6eqM7vcTiLkxpsQpX/bzyEDpbfSJnkFsEFwXiUIheF6IGaC3WCeLNtAJqhKC+TUhWLSbA==}
     engines: {node: '>=23.6'}
     hasBin: true
 
@@ -2426,7 +2426,7 @@ snapshots:
       '@preact/signals-core': 1.14.5
       preact: 11.2.0
 
-  '@project516/java-web@0.1.1': {}
+  '@project516/java-web@0.1.3': {}
 
   '@rolldown/binding-android-arm-eabi@1.2.16':
     optional: true

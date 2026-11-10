@@ -208,13 +208,13 @@ try {
       return Math.hypot(pose[0] - window.driveStart[0], pose[1] - window.driveStart[1]) > 0.25
     }, undefined, { timeout: 60_000, polling: 100 })
     .then(() => true, () => false)
-  check('the robot drives 0.25 m within 60 s', reached, 'the Field2d pose did not move that far; the next check has the diagnostics')
-  const during = await robotPoses()
   await page.evaluate(() => {
     clearInterval(window.driveTimer)
     window.frcDevWasmSim.send({ type: 'Joystick', device: '0', data: { '>axes': [0, 0, 0], '>buttons': [], '>povs': [] } })
     window.frcDevWasmSim.send({ type: 'DriverStation', device: '', data: { '>new_data': true } })
   })
+  check('the robot drives 0.25 m within 60 s', reached, 'the Field2d pose did not move that far; the next check has the diagnostics')
+  const during = await robotPoses()
   // Whichever pose topic moved the most: teams name them differently.
   const moves = Object.keys(during).map((name) => [name, before[name] ? Math.hypot(during[name][0] - before[name][0], during[name][1] - before[name][1]) : 0])
   const [movedTopic, moved] = moves.sort((x, y) => y[1] - x[1])[0] ?? ['none', 0]

@@ -15,7 +15,8 @@ const MARKER = 'outermostMember';
 const sha256 = (...parts) => parts.reduce((hash, part) => hash.update(part), createHash('sha256')).digest('hex');
 const text = (bytes) => Buffer.from(bytes).toString('utf8');
 const handlerEntry = (name) => `SCL.lombok/${HANDLERS}${name}.SCL.lombok`;
-const isExtensionMethodHandler = (entry) => entry.startsWith(handlerEntry('HandleExtensionMethod'));
+// The handler and its nested classes, not other handlers whose names start the same way
+const isExtensionMethodHandler = (entry) => /^SCL\.lombok\/lombok\/javac\/handlers\/HandleExtensionMethod(\$[^/]+)?\.SCL\.lombok$/.test(entry);
 
 // Applies a unified diff of one file. Each hunk must match its context exactly.
 function applyPatch(source, patch, fail) {

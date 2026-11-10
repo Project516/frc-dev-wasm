@@ -204,7 +204,7 @@ try {
     .waitForFunction(() => {
       const pose = window.frcDevWasmNt4.getTopics().find((t) => t.name === '/SmartDashboard/Field2d/Robot')?.value
       if (!Array.isArray(pose)) return false
-      window.driveStart ??= pose
+      window.driveStart ??= [...pose]
       return Math.hypot(pose[0] - window.driveStart[0], pose[1] - window.driveStart[1]) > 0.25
     }, undefined, { timeout: 60_000, polling: 100 })
     .then(() => true, () => false)

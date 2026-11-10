@@ -200,14 +200,15 @@ try {
   })
   // Stop after a short drive: about 1.15 m ahead the robot hits a field element, where its wheels keep
   // turning, so CTRE's odometry runs ahead of the simulated pose as it would on a real robot
-  const start = before['/SmartDashboard/Field2d/Robot']
-  if (start)
-    await page
-      .waitForFunction((start) => {
-        const pose = window.frcDevWasmNt4.getTopics().find((t) => t.name === '/SmartDashboard/Field2d/Robot')?.value
-        return Array.isArray(pose) && Math.hypot(pose[0] - start[0], pose[1] - start[1]) > 0.25
-      }, start, { timeout: 60_000, polling: 100 })
-      .catch(() => console.log('the robot pose did not move 0.25 m within 60 s'))
+  // A timeout is not a failure here: the check below reports how far the robot moved, with diagnostics
+  await page
+    .waitForFunction(() => {
+      const pose = window.frcDevWasmNt4.getTopics().find((t) => t.name === '/SmartDashboard/Field2d/Robot')?.value
+      if (!Array.isArray(pose)) return false
+      window.driveStart ??= pose
+      return Math.hypot(pose[0] - window.driveStart[0], pose[1] - window.driveStart[1]) > 0.25
+    }, undefined, { timeout: 60_000, polling: 100 })
+    .catch(() => console.log('the robot pose did not move 0.25 m within 60 s'))
   const during = await robotPoses()
   await page.evaluate(() => {
     clearInterval(window.driveTimer)

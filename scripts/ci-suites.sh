@@ -16,7 +16,26 @@ run() {
   echo "::error::failed: $*"
   failed+=("$*")
 }
-case "${1:?group: ide, java or teams}" in
+# A team suite that fails runs once more with only the repos that failed, which it lists in teams<year>.json.
+# Without that file (the suite stopped before the end) every repo runs again.
+team_suite() {
+  local year=$1 file=apps/ide/test-results/teams$1.json repos
+  rm -f "$file"
+  echo "::group::test:teams$year"
+  if env ${har:+TEAMS_HAR=$har/teams} pnpm --filter @frc-dev-wasm/ide test:teams$year; then echo "::endgroup::"; return; fi
+  echo "::endgroup::"
+  repos=$(node -e 'const { outcomes } = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")); console.log([...new Set(outcomes.filter((o) => o.status === "fail").map((o) => o.repo))].join(","))' "$file" 2>/dev/null)
+  echo "::group::test:teams$year (second try${repos:+: $repos})"
+  if env ${har:+TEAMS_HAR=$har/teams} ${repos:+TEAMS_REPOS=$repos} pnpm --filter @frc-dev-wasm/ide test:teams$year; then
+    echo "::endgroup::"
+    echo "::warning::passed on the second try: test:teams$year${repos:+ ($repos)}"
+    return
+  fi
+  echo "::endgroup::"
+  echo "::error::failed: test:teams$year"
+  failed+=("test:teams$year")
+}
+case "${1:?group: ide, java, java-browser or teams}" in
   ide)
     for s in "${ide[@]}"; do run pnpm --filter @frc-dev-wasm/ide test:$s; done
     ;;
@@ -25,18 +44,20 @@ case "${1:?group: ide, java or teams}" in
     run pnpm --filter @frc-dev-wasm/runtime test
     run env WPILIB_YEAR=2027 pnpm --filter @frc-dev-wasm/runtime test
     run pnpm --filter @frc-dev-wasm/java-web test
+    run pnpm --filter @frc-dev-wasm/git-wasm test
+    ;;
+  java-browser)
     run pnpm --filter @frc-dev-wasm/ide test:2027
     run pnpm --filter @frc-dev-wasm/ide test:junit
     run pnpm --filter @frc-dev-wasm/sim-gui test
     run pnpm --filter @frc-dev-wasm/wpigui-tools test
-    run pnpm --filter @frc-dev-wasm/git-wasm test
     ;;
   teams)
     # With HAR_DIR the team projects' downloads are recorded once and replayed after that
     har=${HAR_DIR/#\~/$HOME}
     if [ -n "$har" ]; then mkdir -p "$har/teams" || exit 1; fi
-    run env ${har:+TEAMS_HAR=$har/teams} pnpm --filter @frc-dev-wasm/ide test:teams2026
-    run env ${har:+TEAMS_HAR=$har/teams} pnpm --filter @frc-dev-wasm/ide test:teams2027
+    team_suite 2026
+    team_suite 2027
     run env ${har:+SPECTRUM_HAR=$har/spectrum.zip} pnpm --filter @frc-dev-wasm/ide test:spectrum
     run env ${har:+JUNIT_HAR=$har/junit-team.zip} pnpm --filter @frc-dev-wasm/ide test:junit-team
     ;;

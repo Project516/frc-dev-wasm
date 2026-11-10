@@ -408,8 +408,8 @@ comes later. 2027 runs on java-web (Java 25), 2026 on CheerpJ (Java 17).
   changed is rebuilt. It runs `scripts/check-dist.sh` first, which refuses a dist without every
   separately built part. `.github/workflows/deploy-proxy.yml` deploys the proxy Worker when its code changes.
 - CI: `.github/workflows/ci.yml` runs the type checks and Node-only tests, then `pnpm build:all`
-  with the same cache, then the suites in three parallel groups (`scripts/ci-suites.sh ide|java|teams`)
-  on each pull request (and a manual run). The `teams` group (real team projects) reports without failing the run.
+  with the same cache, then the suites in parallel groups (`scripts/ci-suites.sh ide|java|java-browser|teams`)
+  on each pull request (and a manual run). The `teams` group (real team projects) reports without failing the run, and a team suite that fails runs again with only the repos that failed.
   Only master and the weekly scheduled run save the build cache, and restoring it each week keeps GitHub from
   evicting it. `scripts/ci-changes.sh` picks the groups from the changed files: a pull request
   that changes only docs or the proxy builds nothing, and a file no rule names runs every group. CI reaches the proxy at

@@ -428,8 +428,8 @@ comes later. 2027 runs on java-web (Java 25), 2026 on CheerpJ (Java 17).
   (`pnpm --filter @frc-dev-wasm/java test`, `--year 2027` for one season). Browser tests use
   `playwright-core` with a Chromium that is already installed; do not download
   browsers in scripts. `pnpm --filter @frc-dev-wasm/ide test:spectrum` clones
-  a real team project (Spectrum3847/2026-Spectrum), builds and simulates it
-  (3 GitHub API requests per run). `SPECTRUM_HAR=<file>` records the clone
+  a real team project (Spectrum3847/2026-Spectrum) at a pinned commit (`SHA` in `tests/spectrum.mjs`), builds
+  and simulates it (3 GitHub API requests per run). `SPECTRUM_HAR=<file>` records the clone
   once and replays it afterwards. `pnpm --filter @frc-dev-wasm/ide test:tools` runs
   DataLogTool in the IDE against the browser workspace. `pnpm --filter @frc-dev-wasm/ide test:smartdashboard` opens
   SmartDashboard against a simulated robot.

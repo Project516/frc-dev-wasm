@@ -5,11 +5,13 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright-core'
-import { buildCode, runCommand as runWpilibCommand, simulate } from './wpilib.mjs'
+import { buildCode, runCommand as runWpilibCommand, shell, simulate } from './wpilib.mjs'
 import { preview } from 'vite'
 import { quickInputReady } from './quickInput.mjs'
 
 const REPO = process.env.SPECTRUM_REPO ?? 'https://github.com/Spectrum3847/2026-Spectrum'
+// The commit of the default repository the test checks out, so the team's new commits do not change it
+const SHA = process.env.SPECTRUM_SHA ?? (process.env.SPECTRUM_REPO ? '' : '181a2fa32cc98e42474cad59ef198fc864a9d24c')
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const results = join(root, 'test-results')
@@ -93,6 +95,12 @@ try {
   await page.locator('.statusbar-item', { hasText: 'WPILib' }).first().waitFor({ timeout: 30_000 })
   await page.waitForFunction(() => document.querySelector('.statusbar')?.textContent?.includes('main'), undefined, { timeout: 120_000 })
   check('project clones through Git: Clone', true)
+  if (SHA) {
+    const out = await shell(page, `git checkout -q --detach ${SHA} && git rev-parse HEAD`)
+    check(`project checks out ${SHA.slice(0, 7)}`, out.split('\n').includes(SHA), out.slice(-300))
+    await page.reload()
+    await page.locator('.statusbar-item', { hasText: 'WPILib' }).first().waitFor({ timeout: 120_000 })
+  }
 
   await buildCode(page, 600_000)
   const buildLog = await dumpTerminal('build')

@@ -89,8 +89,7 @@ export function registerVscodeWpilib({ year, base, manifest, files, openCreator 
         return (
           await api.window.showQuickPick(
             choices.map((c) => ({ ...c, description: [c.description, c.year === year ? 'loaded' : undefined].filter(Boolean).join(', ') })),
-            // The creator's webview opens this pick and takes focus back, which would dismiss it
-            { title: 'Create a New Project', placeHolder: 'WPILib year', ignoreFocusOut: true }
+            { title: 'Create a New Project', placeHolder: 'WPILib year' }
           )
         )?.year
       }

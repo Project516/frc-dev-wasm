@@ -78,8 +78,9 @@ async function openCreator(page, year) {
 // one when the site serves more than one). `onOpened` is called when the new project is open, before its first build.
 export async function createProject(page, { name, base, team = 1234, example = false, year = WPILIB_YEARS.length > 1 ? DEFAULT_YEAR : undefined, onOpened }) {
   const creator = await openCreator(page, year)
-  // The creator registers its click handlers on window.load, after its markup appears.
-  await creator.waitForLoadState('load')
+  // VS Code rewrites a loaded iframe with document.write, so Playwright's load state can
+  // describe the empty page. Wait for this document, whose load event attaches the handlers.
+  await creator.waitForFunction(() => document.readyState === 'complete')
   // 2027's creator is a four step wizard with selects, 2026's asks through quick picks
   const wizard = (await creator.locator('#language-select').count()) > 0
   if (wizard) {

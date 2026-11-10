@@ -30,6 +30,12 @@ await context.addInitScript(() => {
     return write.call(this, ArrayBuffer.isView(data) ? new Uint8Array(data.buffer) : data)
   }
 })
+// The webview can become visible before its scripts arrive. Keep this slower than its
+// 200 ms reveal timeout so project creation exercises that ordering even on a local server.
+await context.route('**/runtime/2026/vscode-wpilib/resources/dist/projectcreatorpage.js', async (route) => {
+  await new Promise((resolve) => setTimeout(resolve, 1000))
+  await route.continue()
+})
 const page = await context.newPage()
 // SMOKE_CPU_THROTTLE=<n> slows the page n times, as a low-end computer does, which brings out races
 // between the workbench, webviews and the extension host

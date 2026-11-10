@@ -200,15 +200,15 @@ try {
   })
   // Stop after a short drive: about 1.15 m ahead the robot hits a field element, where its wheels keep
   // turning, so CTRE's odometry runs ahead of the simulated pose as it would on a real robot
-  // A timeout is not a failure here: the check below reports how far the robot moved, with diagnostics
-  await page
+  // A timeout is not a failure here: the check below reports it with how far the robot moved
+  const reached = await page
     .waitForFunction(() => {
       const pose = window.frcDevWasmNt4.getTopics().find((t) => t.name === '/SmartDashboard/Field2d/Robot')?.value
       if (!Array.isArray(pose)) return false
       window.driveStart ??= pose
       return Math.hypot(pose[0] - window.driveStart[0], pose[1] - window.driveStart[1]) > 0.25
     }, undefined, { timeout: 60_000, polling: 100 })
-    .catch(() => console.log('the robot pose did not move 0.25 m within 60 s'))
+    .then(() => true, () => false)
   const during = await robotPoses()
   await page.evaluate(() => {
     clearInterval(window.driveTimer)
@@ -220,7 +220,7 @@ try {
   const [movedTopic, moved] = moves.sort((x, y) => y[1] - x[1])[0] ?? ['none', 0]
   const diagnostics = moved > 0.05 ? '' : await page.evaluate(async () => `${JSON.stringify(window.frcDevWasmNt4.getTopics().filter((t) => /SuperStructure|SystemState|WantedState|FMSControlData|Pilot|Alliance/i.test(t.name) && !Array.isArray(t.value)).slice(0, 40).map((t) => `${t.name}=${t.value}`))}`)
   const sent = await gui.evaluate(() => window.joystickSent.slice(-3))
-  check('driving with the joystick moves the robot pose', moved > 0.05, `swerve in teleop drive: ${driving}. ${movedTopic} moved ${moved.toFixed(2)} m. before ${JSON.stringify(before)}, after ${JSON.stringify(during)}. Joystick messages to the robot: ${sent.join(' ')}. GUI state: ${JSON.stringify({ ...(await simState()), known: undefined })}. new data announcements sent: ${await gui.evaluate(() => window.dsSent.filter((m) => /\{"\>new_data":true\}$/.test(m)).length)}. DriverStation messages to the robot: ${(await gui.evaluate(() => window.dsSent.filter((m) => !/^\d+ \{">new_data":true\}$/.test(m)).slice(0, 30))).join(' | ')}. ${diagnostics}`)
+  check('driving with the joystick moves the robot pose', moved > 0.05, `swerve in teleop drive: ${driving}. Field2d pose moved 0.25 m within 60 s: ${reached}. ${movedTopic} moved ${moved.toFixed(2)} m. before ${JSON.stringify(before)}, after ${JSON.stringify(during)}. Joystick messages to the robot: ${sent.join(' ')}. GUI state: ${JSON.stringify({ ...(await simState()), known: undefined })}. new data announcements sent: ${await gui.evaluate(() => window.dsSent.filter((m) => /\{"\>new_data":true\}$/.test(m)).length)}. DriverStation messages to the robot: ${(await gui.evaluate(() => window.dsSent.filter((m) => !/^\d+ \{">new_data":true\}$/.test(m)).slice(0, 30))).join(' | ')}. ${diagnostics}`)
   // CTRE's odometry follows maple-sim's pose, as on the desktop: maple-sim sets the encoders and the gyro
   await page.waitForTimeout(2000)
   const poses = await page.evaluate(() => {

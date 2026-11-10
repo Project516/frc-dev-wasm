@@ -5,6 +5,7 @@
   "dependencyDashboard": true,
   "semanticCommits": "enabled",
   "minimumReleaseAge": "1 day",
+  "rangeStrategy": "pin",
   "packageRules": [
     {
       "description": "The VS Code workbench packages release together and must stay on one version",

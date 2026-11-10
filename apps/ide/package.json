@@ -85,18 +85,18 @@
     "@frc-dev-wasm/runtime": "workspace:*",
     "@frc-dev-wasm/sim-gui": "workspace:*",
     "@frc-dev-wasm/vscode-wpilib": "workspace:*",
-    "buffer": "^6.0.3",
-    "fflate": "^0.8.3",
-    "isomorphic-git": "^1.44.11",
-    "just-bash": "^3.6.0",
-    "modern-tar": "^0.8.6",
+    "buffer": "6.0.3",
+    "fflate": "0.8.3",
+    "isomorphic-git": "1.44.12",
+    "just-bash": "3.6.0",
+    "modern-tar": "0.8.6",
     "monaco-editor": "npm:@codingame/monaco-vscode-editor-api@39.0.4",
     "vscode": "npm:@codingame/monaco-vscode-extension-api@39.0.4"
   },
   "devDependencies": {
-    "@types/node": "^26.6.6",
+    "@types/node": "26.6.6",
     "playwright-core": "1.65.0",
-    "typescript": "^7.0.2",
-    "vite": "^8.3.6"
+    "typescript": "7.0.2",
+    "vite": "8.3.7"
   }
 }

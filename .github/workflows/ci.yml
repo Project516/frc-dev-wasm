@@ -183,7 +183,7 @@ jobs:
           RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
           RCLONE_CONFIG_R2_NO_CHECK_BUCKET: 'true'
 
-  # The browser and Java suites, in three groups of about the same length
+  # The browser and Java suites, in parallel groups (scripts/ci-suites.sh)
   suites:
     if: contains(fromJSON('["pull_request", "workflow_dispatch"]'), github.event_name) && needs.changes.outputs.groups != '[]'
     # A failed check stops the hour of suites

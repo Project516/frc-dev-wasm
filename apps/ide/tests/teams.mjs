@@ -50,24 +50,10 @@ const SEASONS = {
       gaps: []
     },
     {
-      name: '1678',
-      url: 'https://github.com/frc1678/C2026-Public',
-      sha: '0f403dd8f3ad1f7d0dbe0c1bd23b24c210f41677',
-      // Commands v2, Phoenix 6, Choreo, PhotonLib
-      gaps: []
-    },
-    {
       name: '1814',
       url: 'https://github.com/StuyPulse/StuyPlus-2026',
       sha: '6958900cf28dc499a226c90f9485cd8ea89ebe81',
       // Commands v2, AdvantageKit, DogLog, Phoenix 6, PathPlanner, maple-sim
-      gaps: []
-    },
-    {
-      name: '111',
-      url: 'https://github.com/wildstang/2026_111_robot_software',
-      sha: '46a0005b4ce78c6ab520e16e490d0697ac4c3a1b',
-      // Commands v2, AdvantageKit, Phoenix 6, REVLib, Choreo, URCL, Grapple, PhotonLib
       gaps: []
     },
     {
@@ -103,13 +89,6 @@ const SEASONS = {
       url: 'https://github.com/flamingchickens1540/robot2026',
       sha: 'f59a598093d7da52bc0823b3542102b32ea6cbba',
       // Commands v2, AdvantageKit, Phoenix 5 and 6, REVLib, Studica, URCL, Choreo, PathPlanner, Grapple, maple-sim, PhotonLib, gversion, jama
-      gaps: []
-    },
-    {
-      name: '167',
-      url: 'https://github.com/icrobotics-team167/2026_Rebuilt',
-      sha: '8e2daf371f695ae9d29806505ca90f67d511fff3',
-      // Commands v2, AdvantageKit, Phoenix 6, REVLib, Choreo, maple-sim, PhotonLib, gversion
       gaps: []
     }
   ],

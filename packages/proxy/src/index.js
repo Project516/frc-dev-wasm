@@ -13,6 +13,7 @@ export const MAVEN_REPOSITORIES = [
   'https://andymarkproductsoftware.github.io/amlib-vendordep/repo/2026/',
   'https://cdn.yassrobotics.com/',
   'https://dev.studica.com/maven/release/2026/',
+  'https://dev.studica.com/maven/release/2027/',
   'https://docs.home.thethriftybot.com/',
   'https://frcmaven.wpi.edu/artifactory/littletonrobotics-mvn-release/',
   'https://frcmaven.wpi.edu/artifactory/release/',

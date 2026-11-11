@@ -42,6 +42,16 @@ async function sources() {
   fs.writeFileSync(stamp, patchHash)
 }
 
+// What the build reads, so a current build needs neither the sources nor emsdk
+const stamp = sha256(
+  [GIT_VERSION, ...['build.mjs', 'config.mak', 'patches/git-wasm.patch', 'src/pre.js', 'src/library.js', '../wpigui-tools/toolchain.mjs'].map((f) => fs.readFileSync(path.join(HERE, f)))].join('\0')
+)
+const stampFile = path.join(OUT, '.stamp')
+if (fs.existsSync(path.join(OUT, 'git.wasm')) && fs.existsSync(stampFile) && fs.readFileSync(stampFile, 'utf8') === stamp) {
+  console.log('git is up to date')
+  process.exit(0)
+}
+
 await sources()
 const { env, emcc } = ensureEmsdk()
 env.PATH = `${path.dirname(emcc)}${path.delimiter}${env.PATH}`
@@ -79,4 +89,5 @@ fs.mkdirSync(OUT, { recursive: true })
 fs.writeFileSync(path.join(OUT, 'git.mjs'), glue.replace(from, to))
 fs.copyFileSync(path.join(SRC, 'git.wasm'), path.join(OUT, 'git.wasm'))
 fs.copyFileSync(path.join(SRC, 'git.mjs.symbols'), path.join(OUT, 'git.symbols'))
+fs.writeFileSync(stampFile, stamp)
 console.log(`wrote ${OUT}`)

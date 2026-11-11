@@ -43,10 +43,13 @@ function fetchSource() {
   run('git', ['checkout', '-q', 'FETCH_HEAD'], { cwd: SRC });
 }
 
+const patchFiles = () => fs.readdirSync(PATCHES).filter((f) => f.endsWith('.patch')).sort();
+const patchHash = () => sha(COMMIT, ...patchFiles().map((f) => fs.readFileSync(path.join(PATCHES, f), 'utf8')));
+
 // Returns the patch-set hash and whether the sources were repatched (so the build is stale).
 function applyPatches() {
-  const files = fs.readdirSync(PATCHES).filter((f) => f.endsWith('.patch')).sort();
-  const hash = sha(COMMIT, ...files.map((f) => fs.readFileSync(path.join(PATCHES, f), 'utf8')));
+  const files = patchFiles();
+  const hash = patchHash();
   const stamp = inSrc('.frc-patched');
   if (readIfExists(stamp) === hash) return { hash, changed: false };
   run('git', ['checkout', '-q', '--', '.'], { cwd: SRC });
@@ -168,12 +171,13 @@ function assemble(hash) {
 }
 
 function main() {
-  fetchSource();
-  const { hash } = applyPatches();
-  if (readIfExists(path.join(OUT, '.frc-built')) === hash && readIfExists(inSrc('.frc-built')) === hash) {
+  // An output built from this commit and these patches is current, without the sources or emsdk
+  if (readIfExists(path.join(OUT, '.frc-built')) === patchHash()) {
     console.log('advantagescope is up to date');
     return;
   }
+  fetchSource();
+  const { hash } = applyPatches();
   install();
   prepareAssets();
   if (readIfExists(inSrc('.frc-built')) !== hash) {

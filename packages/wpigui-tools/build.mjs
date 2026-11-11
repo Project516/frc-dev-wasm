@@ -347,11 +347,19 @@ async function buildApp(toolchain, name) {
   console.log(`${name}: ${sizes.join(', ')}`);
 }
 
-const toolchain = ensureEmsdk();
+let toolchain;
 for (const year of years) {
   await useYear(year);
   const selected = args.length ? args : Object.keys(apps);
   for (const name of selected) if (!apps[name]) throw new Error(`${year}: unknown app ${name}, expected one of ${Object.keys(apps).join(', ')}`);
+  // A tool stamped with these sources is current, so a season of them needs neither emsdk nor allwpilib
+  const hash = sourceHash(year);
+  const current = (name) => fs.existsSync(path.join(OUT, name, 'index.html')) && fs.existsSync(path.join(OUT, name, STAMP)) && fs.readFileSync(path.join(OUT, name, STAMP), 'utf8') === hash;
+  if (selected.every(current)) {
+    console.log(`WPILib ${year}: ${selected.join(', ')} up to date`);
+    continue;
+  }
+  toolchain ??= ensureEmsdk();
   console.log(`WPILib ${year}`);
   prepareSource(await ensureAllwpilib(year), year);
   generateVersion();

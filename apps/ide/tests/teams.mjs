@@ -339,10 +339,11 @@ async function runRepo(repo) {
         const shown = async (selector) => (await page.locator(selector).allInnerTexts()).join(' | ').replace(/\s+/g, ' ').slice(0, 300) || 'none'
         const state = `Requests in flight: ${[...pending].join(' ') || 'none'}. Input box: ${await shown('.quick-input-widget:not([style*="display: none"])')}. Notifications: ${await shown('.notifications-toasts .notification-list-item')}. Status bar: ${await shown('.statusbar-item')}`
         const log = `teams-${YEAR}-${repo.name}-git-output.log`
-        const runs = await page.evaluate(() => JSON.stringify(globalThis.gitRuns, null, 2)).catch((e) => `(unavailable: ${e.message})`)
+        // A clone that ended opens its folder, which reloads the page and drops the trace
+        const runs = await page.evaluate(() => JSON.stringify(globalThis.gitRuns, null, 2) ?? '(none: the page reloaded)').catch((e) => `(unavailable: ${e.message})`)
         const output = await gitOutput().catch((e) => `(Git output unavailable: ${e.message})`)
         writeFileSync(join(results, log), `git processes (ms since page load: ${await page.evaluate(() => Math.round(performance.now())).catch(() => '?')}):\n${runs}\n\nGit output:\n${output}`)
-        throw new Error(`no project after 600 s. ${state}. Git output: ${log}`)
+        throw new Error(`no project after 600 s, git processes and output in ${log}. ${state}`)
       })
       if (!(await buildGradle.isVisible())) await projectRoot.click()
       await buildGradle.waitFor({ timeout: 60_000 })

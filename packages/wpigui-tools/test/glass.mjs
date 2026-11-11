@@ -64,8 +64,23 @@ try {
     const plot = await shot('glass-3-plot');
     check('a plot window shows a value dragged from the NT tree', !plot.equals(later));
 
-    // Settings reach IndexedDB shortly after a change and load again on start.
-    await page.waitForTimeout(6000);
+    await glass.waitForFunction(async () => {
+      const db = await new Promise((resolve, reject) => {
+        const request = indexedDB.open('/settings/glass');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      try {
+        if (!db.objectStoreNames.contains('FILE_DATA')) return false;
+        return await new Promise((resolve, reject) => {
+          const request = db.transaction('FILE_DATA').objectStore('FILE_DATA').getAllKeys();
+          request.onsuccess = () => resolve(request.result.some((key) => String(key).endsWith('.json')));
+          request.onerror = () => reject(request.error);
+        });
+      } finally {
+        db.close();
+      }
+    }, undefined, { timeout: 30_000 });
     await page.reload();
     await page.waitForFunction(() => 'scenarios' in window);
     await page.evaluate((season) => window.scenarios.glassStart(season), year);

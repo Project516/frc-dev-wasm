@@ -284,9 +284,11 @@ try {
   await page.waitForTimeout(800)
   await page.keyboard.press('Control+C')
   await page.waitForFunction(() => /\^C[\s\S]*frc:\S*\$\s*$/.test(document.querySelector('.terminal-wrapper.active .xterm-rows')?.textContent ?? ''), undefined, { timeout: 10_000 })
-  await page.waitForTimeout(45_000)
+  // A build waits for one still compiling the same sources, so once this one ends the interrupted one has too
+  const rebuild = await sh('./gradlew build', 240_000)
+  await page.waitForTimeout(3000)
   const afterInterrupt = (await screen()).split('^C').pop()
-  check('output stops after Ctrl+C gave the prompt back', !afterInterrupt.includes('BUILD') && PROMPT.test(afterInterrupt), JSON.stringify(afterInterrupt.slice(-200)))
+  check('output stops after Ctrl+C gave the prompt back', /BUILD SUCCESSFUL/.test(rebuild) && afterInterrupt.match(/BUILD (SUCCESSFUL|FAILED)/g)?.length === 1, JSON.stringify(afterInterrupt.slice(-300)))
 
   await sh('cd /workspace')
   await expectOutput('files from the template are visible to ls', 'ls MyRobot', /build\.gradle/)

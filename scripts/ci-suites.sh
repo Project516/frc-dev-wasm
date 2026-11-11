@@ -4,7 +4,7 @@ set -uo pipefail
 HAR_DIR=${HAR_DIR:-}
 # Pull requests test 2027 and the IDE; suites of 2026 alone (RobotBuilder, SmartDashboard, the CheerpJ runtime
 # scenarios, 2026 team projects) run by hand until 2026 is removed
-ide=(smoke cache git github-link gh terminal copilot tools)
+ide=(smoke cache github-link gh terminal copilot tools)
 failed=()
 # A suite that fails runs once more: browser suites have timing failures on a loaded runner. A pass on the
 # second try is still reported, so a suite that keeps needing it stands out.
@@ -51,6 +51,7 @@ case "${1:?group: ide, java, java-browser or teams}" in
     run pnpm --filter @frc-dev-wasm/java test --year 2027
     run pnpm --filter @frc-dev-wasm/java-web test
     run pnpm --filter @frc-dev-wasm/ide test:maven
+    run pnpm --filter @frc-dev-wasm/ide test:git
     run pnpm --filter @frc-dev-wasm/git-wasm test
     # Here .cache has each season's vendordeps, so the proxy test also checks that it lists every marketplace repository
     run pnpm --filter @frc-dev-wasm/proxy test

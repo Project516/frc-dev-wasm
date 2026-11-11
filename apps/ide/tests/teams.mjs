@@ -325,10 +325,17 @@ async function runRepo(repo) {
           await page.waitForTimeout(800)
         }
         // A focus change can close the URL or folder pick, and the Git extension then drops the clone without a
-        // message. Without the trace, or after the reload of a finished clone, it counts as started.
+        // message. Without the trace, or when a finished clone reloads the page into its folder, it counts as started.
         const started = await page
           .waitForFunction(() => !globalThis.gitRuns || globalThis.gitRuns.some((run) => run.args.startsWith('clone ')), undefined, { timeout: 60_000 })
-          .then(() => true, (error) => !error.name?.includes('Timeout'))
+          .then(
+            () => true,
+            (error) => {
+              if (error.name?.includes('Timeout')) return false
+              if (/context was destroyed|navigat/i.test(error.message)) return true
+              throw error
+            }
+          )
         if (started || attempt === 3 || (await dialog.count())) break
         console.log(`${repo.name}: no clone started after attempt ${attempt}, its pick closed; trying again`)
       }

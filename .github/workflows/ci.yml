@@ -24,9 +24,9 @@ env:
     !.cache/advantagescope
     !.cache/git-wasm
     !.cache/allwpilib
-    !.cache/2027/allwpilib
+    !.cache/*/allwpilib
     !.cache/wpigui-tools
-    !.cache/2027/wpigui-tools
+    !.cache/*/wpigui-tools
     !.cache/downloads
 
 # A new push to a pull request replaces its run. Master runs all finish: a canceled build saves no cache.

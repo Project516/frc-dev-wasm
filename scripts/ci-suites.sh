@@ -4,7 +4,7 @@ set -uo pipefail
 HAR_DIR=${HAR_DIR:-}
 # Pull requests test 2027 and the IDE; suites of 2026 alone (RobotBuilder, SmartDashboard, the CheerpJ runtime
 # scenarios, 2026 team projects) run by hand until 2026 is removed
-ide=(smoke cache github-link gh terminal copilot tools)
+ide=(smoke cache github-link gh terminal copilot)
 failed=()
 # A suite that fails runs once more: browser suites have timing failures on a loaded runner. A pass on the
 # second try is still reported, so a suite that keeps needing it stands out.
@@ -43,14 +43,13 @@ team_suite() {
   echo "::error::failed: test:teams$year"
   failed+=("test:teams$year")
 }
-case "${1:?group: ide, java, java-browser or teams}" in
+case "${1:?group: ide, java, java-browser, tools or teams}" in
   ide)
     for s in "${ide[@]}"; do run pnpm --filter @frc-dev-wasm/ide test:$s; done
     ;;
   java)
     run pnpm --filter @frc-dev-wasm/java test --year 2027
     run pnpm --filter @frc-dev-wasm/java-web test
-    run pnpm --filter @frc-dev-wasm/ide test:maven
     run pnpm --filter @frc-dev-wasm/ide test:git
     run pnpm --filter @frc-dev-wasm/git-wasm test
     # Here .cache has each season's vendordeps, so the proxy test also checks that it lists every marketplace repository
@@ -59,8 +58,12 @@ case "${1:?group: ide, java, java-browser or teams}" in
   java-browser)
     run pnpm --filter @frc-dev-wasm/ide test:2027
     run env YEARS=2027 pnpm --filter @frc-dev-wasm/ide test:junit
-    run pnpm --filter @frc-dev-wasm/sim-gui test
+    run pnpm --filter @frc-dev-wasm/ide test:maven
+    ;;
+  tools)
     run pnpm --filter @frc-dev-wasm/wpigui-tools test --year 2027
+    run pnpm --filter @frc-dev-wasm/sim-gui test
+    run pnpm --filter @frc-dev-wasm/ide test:tools
     ;;
   teams)
     # With HAR_DIR the team projects' downloads are recorded once and replayed after that

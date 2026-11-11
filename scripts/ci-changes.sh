@@ -4,13 +4,13 @@
 # A changed file that no rule names runs every group, so a new folder is tested until it gets a rule.
 set -euo pipefail
 base=${1:-}
-all='["ide","java","java-browser","teams"]'
+all='["ide","java","java-browser","tools","teams"]'
 [ -n "$base" ] || { echo "groups=$all"; exit 0; }
 
 # Outside the loop, so set -e stops on a bad base instead of reporting no changes
 changed=$(git diff --name-only "$base"...HEAD)
 
-ide=0 java=0 jb=0 teams=0
+ide=0 java=0 jb=0 tools=0 teams=0
 while IFS= read -r file; do
   [ -n "$file" ] || continue
   case "$file" in
@@ -23,18 +23,20 @@ while IFS= read -r file; do
     # test:git runs in the java group, git in the terminal in ide
     apps/ide/src/git/* | packages/vscode-git/*) ide=1 java=1 ;;
     apps/ide/tests/teams.mjs) teams=1 ;;
-    apps/ide/tests/wpilib2027.mjs | apps/ide/tests/junit.mjs) jb=1 ;;
-    apps/ide/tests/maven.mjs | apps/ide/tests/git.mjs | apps/ide/tests/gitBrowser.mjs) java=1 ;;
+    apps/ide/tests/wpilib2027.mjs | apps/ide/tests/junit.mjs | apps/ide/tests/maven.mjs) jb=1 ;;
+    apps/ide/tests/git.mjs | apps/ide/tests/gitBrowser.mjs) java=1 ;;
+    apps/ide/tests/tools.mjs) tools=1 ;;
     apps/ide/tests/*) ide=1 ;;
     # Builds, simulation and vendor libraries, which the team projects exercise
-    apps/ide/src/frc/* | packages/runtime/src/*) ide=1 java=1 jb=1 teams=1 ;;
-    # test:2027 runs on java-web
-    packages/java-web/*) java=1 jb=1 ;;
-    packages/sim-gui/* | packages/wpigui-tools/*) ide=1 jb=1 ;;
+    apps/ide/src/frc/* | packages/runtime/src/*) ide=1 java=1 jb=1 tools=1 teams=1 ;;
+    # test:2027 and the 2027 tools test run on java-web
+    packages/java-web/*) java=1 jb=1 tools=1 ;;
+    # smoke and test:2027 open the Sim GUI
+    packages/sim-gui/* | packages/wpigui-tools/*) ide=1 jb=1 tools=1 ;;
     packages/git-wasm/*) ide=1 java=1 ;;
-    packages/java/* | packages/vscode-wpilib/*) ide=1 java=1 jb=1 teams=1 ;;
+    packages/java/* | packages/vscode-wpilib/*) ide=1 java=1 jb=1 tools=1 teams=1 ;;
     # Everything else: the workbench setup, dependencies, build scripts, CI itself
-    *) ide=1 java=1 jb=1 teams=1 ;;
+    *) ide=1 java=1 jb=1 tools=1 teams=1 ;;
   esac
 done <<< "$changed"
 
@@ -42,5 +44,6 @@ groups=()
 [ $ide = 1 ] && groups+=('"ide"')
 [ $java = 1 ] && groups+=('"java"')
 [ $jb = 1 ] && groups+=('"java-browser"')
+[ $tools = 1 ] && groups+=('"tools"')
 [ $teams = 1 ] && groups+=('"teams"')
 echo "groups=[$(IFS=,; echo "${groups[*]}")]"

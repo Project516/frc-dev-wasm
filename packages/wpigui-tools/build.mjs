@@ -151,8 +151,10 @@ function generateFiles(target, name) {
 
 function generateVersion() {
   const file = path.join(GEN, 'WPILibVersion.cpp');
+  const text = `const char* GetWPILibVersion() {\n  return "${targets.WPILIB_VERSION}";\n}\n`;
+  if (fs.existsSync(file) && fs.readFileSync(file, 'utf8') === text) return;
   fs.mkdirSync(GEN, { recursive: true });
-  fs.writeFileSync(file, `const char* GetWPILibVersion() {\n  return "${targets.WPILIB_VERSION}";\n}\n`);
+  fs.writeFileSync(file, text);
 }
 
 function closure(names, all) {
@@ -202,12 +204,34 @@ function spawnAsync(cmd, cmdArgs, env, label) {
   });
 }
 
-function depsUpToDate(objFile, depFile) {
-  if (!fs.existsSync(objFile) || !fs.existsSync(depFile)) return false;
-  const objTime = fs.statSync(objFile).mtimeMs;
+function depsOf(depFile) {
   const text = fs.readFileSync(depFile, 'utf8').replace(/\\\n/g, ' ');
-  const deps = text.slice(text.indexOf(':') + 1).trim().split(/(?<!\\)\s+/).filter(Boolean);
-  return deps.every((dep) => fs.existsSync(dep) && fs.statSync(dep).mtimeMs <= objTime);
+  return text.slice(text.indexOf(':') + 1).trim().split(/(?<!\\)\s+/).filter(Boolean);
+}
+
+const fileHashes = new Map();
+function contentHash(files) {
+  const hash = createHash('sha1');
+  for (const file of files) {
+    let h = fileHashes.get(file);
+    if (!h) fileHashes.set(file, (h = createHash('sha1').update(fs.readFileSync(file)).digest('hex')));
+    hash.update(`${file}\0${h}\0`);
+  }
+  return hash.digest('hex');
+}
+
+// Compared by content, since a git checkout gives every file a new mtime. An object from before the stamps
+// is checked by mtime once.
+function upToDate(obj, depFile) {
+  if (!fs.existsSync(obj) || !fs.existsSync(depFile)) return false;
+  const deps = depsOf(depFile);
+  if (!deps.every((dep) => fs.existsSync(dep))) return false;
+  const stamp = `${obj}.sha1`;
+  if (fs.existsSync(stamp)) return fs.readFileSync(stamp, 'utf8') === contentHash(deps);
+  const objTime = fs.statSync(obj).mtimeMs;
+  if (!deps.every((dep) => fs.statSync(dep).mtimeMs <= objTime)) return false;
+  fs.writeFileSync(stamp, contentHash(deps));
+  return true;
 }
 
 // Compiles sources in parallel; returns the object files in input order.
@@ -221,13 +245,14 @@ async function compile(toolchain, name, files, flags) {
     const obj = path.join(OBJ, name, hash, `${rel.replaceAll(path.sep, '_')}.o`);
     objs.push(obj);
     const depFile = `${obj}.d`;
-    if (depsUpToDate(obj, depFile) && fs.statSync(obj).mtimeMs >= fs.statSync(file).mtimeMs) continue;
+    if (upToDate(obj, depFile)) continue;
     tasks.push(async () => {
       fs.mkdirSync(path.dirname(obj), { recursive: true });
       const own = file.startsWith(GLUE) ? [] : UPSTREAM;
       const c = file.endsWith('.c');
       const common = c ? targets.compileFlags.map((f) => (f.startsWith('-std=') ? '-std=gnu17' : f)) : targets.compileFlags;
       await spawnAsync(c ? toolchain.emcc : toolchain.empp, ['-c', file, '-o', obj, '-MD', '-MF', depFile, ...common, ...(c ? ['-w'] : own), ...flags], toolchain.env, rel);
+      fs.writeFileSync(`${obj}.sha1`, contentHash(depsOf(depFile)));
       console.log(`[${name} ${++done}/${tasks.length}] ${rel}`);
     });
   }

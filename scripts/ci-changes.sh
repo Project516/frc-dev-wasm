@@ -16,14 +16,16 @@ while IFS= read -r file; do
   case "$file" in
     # Text only, or tested by the checks job
     *.md | docs/* | LICENSE | renovate.json | packages/proxy/*) ;;
+    # Run by hand, not in CI (scripts/ci-suites.sh)
+    apps/ide/tests/spectrum.mjs | apps/ide/tests/junitTeam.mjs | apps/ide/tests/robotbuilder.mjs | apps/ide/tests/smartdashboard.mjs | packages/runtime/test/*) ;;
     # The IDE alone: the workbench, its git, terminal and Copilot, the tools
     apps/ide/src/copilot/* | apps/ide/src/git/* | apps/ide/src/frc/terminal/* | packages/vscode-git/*) ide=1 ;;
-    apps/ide/tests/teams.mjs | apps/ide/tests/spectrum.mjs | apps/ide/tests/junitTeam.mjs) teams=1 ;;
+    apps/ide/tests/teams.mjs) teams=1 ;;
     apps/ide/tests/wpilib2027.mjs | apps/ide/tests/junit.mjs) jb=1 ;;
+    apps/ide/tests/maven.mjs) java=1 ;;
     apps/ide/tests/*) ide=1 ;;
     # Builds, simulation and vendor libraries, which the team projects exercise
     apps/ide/src/frc/* | packages/runtime/src/*) ide=1 java=1 jb=1 teams=1 ;;
-    packages/runtime/test/*) java=1 ;;
     # test:2027 runs on java-web
     packages/java-web/*) java=1 jb=1 ;;
     packages/sim-gui/* | packages/wpigui-tools/*) ide=1 jb=1 ;;

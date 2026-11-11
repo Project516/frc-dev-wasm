@@ -274,6 +274,13 @@ async function buildApp(toolchain, name) {
   const objs = await compile(toolchain, name, files, flags);
 
   const out = path.join(OUT, name);
+  const index = path.join(out, 'index.html');
+  const stamp = path.join(out, STAMP);
+  const linked = fs.existsSync(index) && fs.existsSync(stamp) ? fs.statSync(index).mtimeMs : 0;
+  if (linked && fs.readFileSync(stamp, 'utf8') === sourceHash(YEAR) && [...objs, ...archives].every((f) => fs.statSync(f).mtimeMs <= linked)) {
+    console.log(`${name} is up to date`);
+    return;
+  }
   fs.rmSync(out, { recursive: true, force: true });
   fs.mkdirSync(out, { recursive: true });
   console.log(`linking ${name}`);

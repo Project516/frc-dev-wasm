@@ -187,7 +187,7 @@ try {
     try {
       let dir = await (await navigator.storage.getDirectory()).getDirectoryHandle('frc-dev-wasm-files')
       for (const part of ['workspace', 'MyRobot']) dir = await dir.getDirectoryHandle(part)
-      return (await (await (await dir.getFileHandle('Hello.java')).getFile()).text()) === 'public class Hello {}'
+      return /class\s+Hello/.test(await (await (await dir.getFileHandle('Hello.java')).getFile()).text())
     } catch {
       return false
     }

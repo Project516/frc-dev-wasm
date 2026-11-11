@@ -24,11 +24,14 @@ team_suite() {
   echo "::group::test:teams$year"
   if env ${har:+TEAMS_HAR=$har/teams} pnpm --filter @frc-dev-wasm/ide test:teams$year; then echo "::endgroup::"; return; fi
   echo "::endgroup::"
+  [ -f "$file" ] && cp "$file" "${file%.json}-first-try.json"
   repos=$(node -e 'const { outcomes } = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")); console.log([...new Set(outcomes.filter((o) => o.status === "fail").map((o) => o.repo))].join(","))' "$file" 2>/dev/null)
   echo "::group::test:teams$year (second try${repos:+: $repos})"
   if env ${har:+TEAMS_HAR=$har/teams} ${repos:+TEAMS_REPOS=$repos} pnpm --filter @frc-dev-wasm/ide test:teams$year; then
     echo "::endgroup::"
     echo "::warning::passed on the second try: test:teams$year${repos:+ ($repos)}"
+    # CI uploads the first try's results
+    echo "retried=true" >> "${GITHUB_OUTPUT:-/dev/null}"
     return
   fi
   echo "::endgroup::"

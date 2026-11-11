@@ -12,6 +12,23 @@ on:
 permissions:
   contents: read
 
+# What the suites need of the build cache: the outputs and the JDKs, without the toolchains and sources
+# that only rebuilding the separately built parts uses. Save and restore must list the same paths.
+env:
+  SUITE_CACHE: |
+    .cache
+    apps/ide/public/runtime
+    !.cache/emsdk-*
+    !.cache/rust
+    !.cache/terminal-build
+    !.cache/advantagescope
+    !.cache/git-wasm
+    !.cache/allwpilib
+    !.cache/*/allwpilib
+    !.cache/wpigui-tools
+    !.cache/*/wpigui-tools
+    !.cache/downloads
+
 # A new push to a pull request replaces its run. Master runs all finish: a canceled build saves no cache.
 concurrency:
   group: ci-${{ github.ref }}
@@ -140,6 +157,19 @@ jobs:
             .cache
             apps/ide/public/runtime
           key: ${{ needs.changes.outputs.cache-key }}
+      # Saved whenever master lacks it, also when the full cache was there
+      - id: suite-cache
+        if: github.event_name != 'pull_request'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.SUITE_CACHE }}
+          key: suites-${{ needs.changes.outputs.cache-key }}
+          lookup-only: true
+      - if: github.event_name != 'pull_request' && steps.suite-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.SUITE_CACHE }}
+          key: suites-${{ needs.changes.outputs.cache-key }}
       # The nightly site is this build of master
       - if: github.event_name == 'push'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -209,7 +239,14 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # The smaller cache when master saved one for these inputs; otherwise the full one, to rebuild from
+      - id: suite-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.SUITE_CACHE }}
+          key: suites-${{ needs.changes.outputs.cache-key }}
+      - if: steps.suite-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .cache

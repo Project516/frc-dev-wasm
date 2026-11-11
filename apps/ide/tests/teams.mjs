@@ -235,6 +235,17 @@ async function runRepo(repo) {
     await page.keyboard.press('Control+Shift+C')
     return page.evaluate(() => navigator.clipboard.readText())
   }
+  // The Git output channel: each git command the Git extension started, and what it printed
+  async function gitOutput() {
+    await page.keyboard.press('Escape')
+    await runCommand(page, 'Git: Show Git Output')
+    const editor = page.locator('.panel .monaco-editor .view-lines').first()
+    await editor.waitFor({ timeout: 10_000 })
+    await editor.click()
+    await page.keyboard.press('Control+A')
+    await page.keyboard.press('Control+C')
+    return page.evaluate(() => navigator.clipboard.readText())
+  }
   const dump = async (label, name) => {
     const text = await terminalText(name).catch((e) => `(terminal text unavailable: ${e.message})`)
     writeFileSync(join(results, `teams-${YEAR}-${repo.name}-${label}.log`), text)
@@ -276,6 +287,31 @@ async function runRepo(repo) {
     await waitForWorkbench()
 
     await stage('clone', [], async () => {
+      // VS Code's Git output lists a command only when it ends, so the test keeps when each git started and ended,
+      // and the end of its error output (git's progress)
+      await page.evaluate(() => {
+        const git = globalThis.frcDevWasmGit
+        if (!git) return
+        const run = git.run
+        globalThis.gitRuns = []
+        git.run = (request) => {
+          const entry = { args: request.args.join(' '), started: Math.round(performance.now()), stderr: '' }
+          globalThis.gitRuns.push(entry)
+          const decoder = new TextDecoder()
+          const stderr = request.stderr
+          request.stderr = (bytes) => {
+            entry.stderr = (entry.stderr + decoder.decode(bytes, { stream: true })).slice(-400)
+            stderr(bytes)
+          }
+          return run(request).then(
+            (code) => Object.assign(entry, { code, ended: Math.round(performance.now()) }).code,
+            (error) => {
+              Object.assign(entry, { error: `${error}`, ended: Math.round(performance.now()) })
+              throw error
+            }
+          )
+        }
+      })
       await runCommand(page, 'Git: Clone')
       await quickInputReady(page)
       await page.keyboard.type(repo.url)
@@ -301,7 +337,13 @@ async function runRepo(repo) {
       await Promise.race([buildGradle.waitFor({ timeout: 600_000 }), projectRoot.waitFor({ timeout: 600_000 }), refused]).catch(async (error) => {
         if (!error.name?.includes('Timeout')) throw error
         const shown = async (selector) => (await page.locator(selector).allInnerTexts()).join(' | ').replace(/\s+/g, ' ').slice(0, 300) || 'none'
-        throw new Error(`no project after 600 s. Requests in flight: ${[...pending].join(' ') || 'none'}. Input box: ${await shown('.quick-input-widget:not([style*="display: none"])')}. Notifications: ${await shown('.notifications-toasts .notification-list-item')}. Status bar: ${await shown('.statusbar-item')}`)
+        const state = `Requests in flight: ${[...pending].join(' ') || 'none'}. Input box: ${await shown('.quick-input-widget:not([style*="display: none"])')}. Notifications: ${await shown('.notifications-toasts .notification-list-item')}. Status bar: ${await shown('.statusbar-item')}`
+        const log = `teams-${YEAR}-${repo.name}-git-output.log`
+        // A clone that ended opens its folder, which reloads the page and drops the trace
+        const runs = await page.evaluate(() => JSON.stringify(globalThis.gitRuns, null, 2) ?? '(none: the page reloaded)').catch((e) => `(unavailable: ${e.message})`)
+        const output = await gitOutput().catch((e) => `(Git output unavailable: ${e.message})`)
+        writeFileSync(join(results, log), `git processes (ms since page load: ${await page.evaluate(() => Math.round(performance.now())).catch(() => '?')}):\n${runs}\n\nGit output:\n${output}`)
+        throw new Error(`no project after 600 s, git processes and output in ${log}. ${state}`)
       })
       if (!(await buildGradle.isVisible())) await projectRoot.click()
       await buildGradle.waitFor({ timeout: 60_000 })

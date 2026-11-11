@@ -312,16 +312,25 @@ async function runRepo(repo) {
           )
         }
       })
-      await runCommand(page, 'Git: Clone')
-      await quickInputReady(page)
-      await page.keyboard.type(repo.url)
-      await page.keyboard.press('Enter')
-      // The folder to clone into is /workspace, where its dialog starts. It can still be listing at the first Enter.
       const dialog = page.locator('.quick-input-widget:not([style*="display: none"])')
-      await page.waitForTimeout(1500)
-      for (let i = 0; i < 5 && (await dialog.count()); i++) {
+      for (let attempt = 1; ; attempt++) {
+        await runCommand(page, 'Git: Clone')
+        await quickInputReady(page)
+        await page.keyboard.type(repo.url)
         await page.keyboard.press('Enter')
-        await page.waitForTimeout(800)
+        // The folder to clone into is /workspace, where its dialog starts. It can still be listing at the first Enter.
+        await page.waitForTimeout(1500)
+        for (let i = 0; i < 5 && (await dialog.count()); i++) {
+          await page.keyboard.press('Enter')
+          await page.waitForTimeout(800)
+        }
+        // A focus change can close the URL or folder pick, and the Git extension then drops the clone without a
+        // message. Without the trace, or after the reload of a finished clone, it counts as started.
+        const started = await page
+          .waitForFunction(() => !globalThis.gitRuns || globalThis.gitRuns.some((run) => run.args.startsWith('clone ')), undefined, { timeout: 60_000 })
+          .then(() => true, (error) => !error.name?.includes('Timeout'))
+        if (started || attempt === 3 || (await dialog.count())) break
+        console.log(`${repo.name}: no clone started after attempt ${attempt}, its pick closed; trying again`)
       }
       // The clone opens as the workspace folder, which reloads the page
       const buildGradle = page.locator('.explorer-viewlet .monaco-list-row', { hasText: 'build.gradle' }).first()

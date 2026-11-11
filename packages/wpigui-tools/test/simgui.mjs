@@ -85,6 +85,12 @@ try {
 
   if (!(await t.explore('simgui'))) {
     check('the robot program sees the GUI as disconnected', (await robotConsole()).includes('SIMGUI disabled') || !(await sim(gui)).ds);
+    await page.evaluate(() => {
+      window.savedSettings = new Set();
+      window.addEventListener('message', ({ data }) => {
+        if (data?.frcToolFiles && data.type === 'write') window.savedSettings.add(data.path);
+      });
+    });
 
     // Hardware windows are opened from the menu, as on the desktop.
     await t.act(HARDWARE_MENU);
@@ -119,9 +125,9 @@ try {
     check('a keyboard joystick axis reaches the robot', axis, (await robotConsole()).split('\n').filter((l) => l.includes('axis0')).slice(-3).join(' | '));
     await t.shot('simgui-5-axis');
 
-    // Settings reach IndexedDB shortly after a change. A reopened GUI finds the
-    // robot running, takes the inputs the last one sent and loads its layout.
-    await page.waitForTimeout(6000);
+    await page.waitForFunction(() => {
+      return ['simgui.json', 'simgui-ds.json'].every((name) => window.savedSettings.has(`/workspace/MyRobot/${name}`));
+    }, undefined, { timeout: 30_000 });
     const before = await page.screenshot({ clip: PWM_WINDOW });
     await gui.evaluate(() => location.reload());
     await page.frameLocator('#tool').locator('canvas#canvas').waitFor({ timeout: 60_000 });

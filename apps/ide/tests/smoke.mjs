@@ -183,7 +183,15 @@ try {
   await page.keyboard.press('Enter')
   await page.waitForSelector('.editor-instance .monaco-editor')
   await page.keyboard.type('public class Hello {}')
-  await page.waitForTimeout(2500)
+  await page.waitForFunction(async () => {
+    try {
+      let dir = await (await navigator.storage.getDirectory()).getDirectoryHandle('frc-dev-wasm-files')
+      for (const part of ['workspace', 'MyRobot']) dir = await dir.getDirectoryHandle(part)
+      return (await (await (await dir.getFileHandle('Hello.java')).getFile()).text()) === 'public class Hello {}'
+    } catch {
+      return false
+    }
+  }, undefined, { timeout: 30_000 })
   await page.reload()
   await page.waitForSelector('.monaco-workbench .statusbar', { timeout: 120_000 })
   const row = page.locator('.explorer-viewlet .monaco-list-row', { hasText: 'Hello.java' })

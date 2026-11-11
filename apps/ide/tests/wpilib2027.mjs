@@ -64,7 +64,7 @@ const terminalText = () => page.locator('.terminal-wrapper.active .xterm-rows').
 // Waits for `find` to return a value for the whole text of the robot's terminal. A busy page can draw more lines in
 // one frame than the panel shows, so a line can scroll out of the visible rows before any poll sees it.
 async function robotOutput(find, timeout) {
-  for (const start = Date.now(); ; await page.waitForTimeout(3000)) {
+  for (const start = Date.now(); ; await page.waitForTimeout(250)) {
     // The clipboard outlives the reload between projects, so a copy that has not landed must not read as the last one
     await page.evaluate(() => navigator.clipboard.writeText(''))
     await runCommand(page, 'Terminal: Select All')

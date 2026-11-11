@@ -2,7 +2,9 @@
 # Runs one group of the browser and Java suites, each to the end, and fails if any failed.
 set -uo pipefail
 HAR_DIR=${HAR_DIR:-}
-ide=(smoke cache git github-link gh terminal copilot robotbuilder tools smartdashboard maven)
+# Pull requests test 2027 and the IDE; suites of 2026 alone (RobotBuilder, SmartDashboard, the CheerpJ runtime
+# scenarios, 2026 team projects) run by hand until 2026 is removed
+ide=(smoke cache git github-link gh terminal copilot tools)
 failed=()
 # A suite that fails runs once more: browser suites have timing failures on a loaded runner. A pass on the
 # second try is still reported, so a suite that keeps needing it stands out.
@@ -40,28 +42,24 @@ case "${1:?group: ide, java, java-browser or teams}" in
     for s in "${ide[@]}"; do run pnpm --filter @frc-dev-wasm/ide test:$s; done
     ;;
   java)
-    run pnpm --filter @frc-dev-wasm/java test
-    run pnpm --filter @frc-dev-wasm/runtime test
-    run env WPILIB_YEAR=2027 pnpm --filter @frc-dev-wasm/runtime test
+    run pnpm --filter @frc-dev-wasm/java test --year 2027
     run pnpm --filter @frc-dev-wasm/java-web test
+    run pnpm --filter @frc-dev-wasm/ide test:maven
     run pnpm --filter @frc-dev-wasm/git-wasm test
     # Here .cache has each season's vendordeps, so the proxy test also checks that it lists every marketplace repository
     run pnpm --filter @frc-dev-wasm/proxy test
     ;;
   java-browser)
     run pnpm --filter @frc-dev-wasm/ide test:2027
-    run pnpm --filter @frc-dev-wasm/ide test:junit
+    run env YEARS=2027 pnpm --filter @frc-dev-wasm/ide test:junit
     run pnpm --filter @frc-dev-wasm/sim-gui test
-    run pnpm --filter @frc-dev-wasm/wpigui-tools test
+    run pnpm --filter @frc-dev-wasm/wpigui-tools test --year 2027
     ;;
   teams)
     # With HAR_DIR the team projects' downloads are recorded once and replayed after that
     har=${HAR_DIR/#\~/$HOME}
     if [ -n "$har" ]; then mkdir -p "$har/teams" || exit 1; fi
-    team_suite 2026
     team_suite 2027
-    run env ${har:+SPECTRUM_HAR=$har/spectrum.zip} pnpm --filter @frc-dev-wasm/ide test:spectrum
-    run env ${har:+JUNIT_HAR=$har/junit-team.zip} pnpm --filter @frc-dev-wasm/ide test:junit-team
     ;;
   *) echo "unknown group $1" >&2; exit 2 ;;
 esac

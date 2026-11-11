@@ -24,6 +24,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       groups: ${{ steps.pick.outputs.groups }}
+      cache-key: ${{ steps.key.outputs.key }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -35,6 +36,9 @@ jobs:
         run: bash scripts/ci-changes.sh "$BASE" | tee -a "$GITHUB_OUTPUT"
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
+      # The inputs of the separately built parts; build and the suites restore the same key
+      - id: key
+        run: echo "key=build-${{ hashFiles('scripts/*.mjs', 'packages/wpigui-tools/*.mjs', 'packages/wpigui-tools/src/**', 'packages/wpigui-tools/patches/**', 'packages/wpigui-tools/targets/**', 'packages/vscode-wpilib/build.mjs', 'packages/vscode-wpilib/patches/**', 'packages/vscode-wpilib/replacements/**', 'packages/vscode-wpilib/shims/**', 'packages/java-web/build.mjs', 'packages/git-wasm/build.mjs', 'packages/git-wasm/config.mak', 'packages/git-wasm/patches/**', 'packages/git-wasm/src/pre.js', 'packages/git-wasm/src/library.js', 'packages/vscode-git/build.mjs', 'packages/vscode-git/shims/**', 'apps/ide/src/frc/terminal/utilities.ts') }}" >> "$GITHUB_OUTPUT"
 
   # Type checks and the tests that need no built runtime
   checks:
@@ -92,14 +96,12 @@ jobs:
   # Everything pnpm build:all makes. The cache keeps toolchains, sources and built runtime parts,
   # so a warm run rebuilds only what changed. Runs on master too, to keep that cache warm for
   # pull requests and releases.
+  # Master's build: saves the cache and publishes the nightly. On a pull request each suite job builds instead.
   build:
     needs: changes
-    # A pull request that changes only docs or the proxy needs no build
-    if: github.event_name != 'pull_request' || needs.changes.outputs.groups != '[]'
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 300
-    outputs:
-      cache-key: ${{ steps.key.outputs.key }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -110,16 +112,13 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # The inputs of the separately built parts; the suites restore the same key
-      - id: key
-        run: echo "key=build-${{ hashFiles('scripts/*.mjs', 'packages/wpigui-tools/*.mjs', 'packages/wpigui-tools/src/**', 'packages/wpigui-tools/patches/**', 'packages/wpigui-tools/targets/**', 'packages/vscode-wpilib/build.mjs', 'packages/vscode-wpilib/patches/**', 'packages/vscode-wpilib/replacements/**', 'packages/vscode-wpilib/shims/**', 'packages/java-web/build.mjs', 'packages/git-wasm/build.mjs', 'packages/git-wasm/config.mak', 'packages/git-wasm/patches/**', 'packages/git-wasm/src/pre.js', 'packages/git-wasm/src/library.js', 'packages/vscode-git/build.mjs', 'packages/vscode-git/shims/**', 'apps/ide/src/frc/terminal/utilities.ts') }}" >> "$GITHUB_OUTPUT"
       - id: restore
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .cache
             apps/ide/public/runtime
-          key: ${{ steps.key.outputs.key }}
+          key: ${{ needs.changes.outputs.cache-key }}
           restore-keys: build-
       # fetch-deps falls back to the proxy at CI's own address, kept out of the logs
       - run: |
@@ -140,7 +139,7 @@ jobs:
           path: |
             .cache
             apps/ide/public/runtime
-          key: ${{ steps.key.outputs.key }}
+          key: ${{ needs.changes.outputs.cache-key }}
       # The nightly site is this build of master
       - if: github.event_name == 'push'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -193,7 +192,7 @@ jobs:
   suites:
     if: contains(fromJSON('["pull_request", "workflow_dispatch"]'), github.event_name) && needs.changes.outputs.groups != '[]'
     # A failed check stops the hour of suites
-    needs: [changes, checks, build]
+    needs: [changes, checks]
     runs-on: ubuntu-latest
     timeout-minutes: 180
     strategy:
@@ -215,7 +214,7 @@ jobs:
           path: |
             .cache
             apps/ide/public/runtime
-          key: ${{ needs.build.outputs.cache-key }}
+          key: ${{ needs.changes.outputs.cache-key }}
           restore-keys: build-
       # Brings the restored outputs up to date with this commit; fetch-deps falls back to CI's proxy address
       - run: |
@@ -226,6 +225,7 @@ jobs:
           TERMINAL_JOBS: 4
           GIT_JOBS: 4
           CI_PROXY_URL: ${{ secrets.CI_PROXY_URL }}
+      - run: bash scripts/check-dist.sh
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright

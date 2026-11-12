@@ -87,7 +87,7 @@
     "@frc-dev-wasm/vscode-wpilib": "workspace:*",
     "buffer": "6.0.3",
     "fflate": "0.8.3",
-    "isomorphic-git": "1.44.12",
+    "isomorphic-git": "1.44.13",
     "just-bash": "3.6.0",
     "modern-tar": "0.8.6",
     "monaco-editor": "npm:@codingame/monaco-vscode-editor-api@39.0.4",

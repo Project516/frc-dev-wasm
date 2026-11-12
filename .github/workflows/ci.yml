@@ -14,9 +14,13 @@ permissions:
 
 # What the suites need of the build cache: the outputs and the JDKs, without the toolchains and sources
 # that only rebuilding the separately built parts uses. Save and restore must list the same paths.
+# actions/cache archives each matched folder whole, so exclusions must name siblings of what is matched:
+# the children of .cache and of each season's folder.
 env:
   SUITE_CACHE: |
-    .cache
+    .cache/*
+    !.cache/20*
+    .cache/20*/*
     apps/ide/public/runtime
     !.cache/emsdk-*
     !.cache/rust

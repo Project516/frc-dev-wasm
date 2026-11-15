@@ -98,7 +98,11 @@ export async function browserTests({ root, check }) {
         }
       }
       await answer(page, `https://github.com/${repo}`)
-      await widget.locator('.quick-input-box input').waitFor({ timeout: 15_000 })
+      // A folder pick that closed is retried below
+      await widget
+        .locator('.quick-input-box input')
+        .waitFor({ timeout: 15_000 })
+        .catch(() => {})
       // The file dialog can still be listing the folder at the first Enter
       for (let i = 0; i < 5 && (await widget.count()); i++) {
         await page.waitForTimeout(800)

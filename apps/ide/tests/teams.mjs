@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright-core'
 import { JAVA_WEB_YEARS, WPILIB_YEARS } from '../../../packages/runtime/src/years.ts'
 import { runCommand, shell as runShell, simulate } from './wpilib.mjs'
+import { cloneStarted, traceGit } from './gitClone.mjs'
 import { preview } from 'vite'
 import { quickInputReady } from './quickInput.mjs'
 
@@ -287,31 +288,7 @@ async function runRepo(repo) {
     await waitForWorkbench()
 
     await stage('clone', [], async () => {
-      // VS Code's Git output lists a command only when it ends, so the test keeps when each git started and ended,
-      // and the end of its error output (git's progress)
-      await page.evaluate(() => {
-        const git = globalThis.frcDevWasmGit
-        if (!git) return
-        const run = git.run
-        globalThis.gitRuns = []
-        git.run = (request) => {
-          const entry = { args: request.args.join(' '), started: Math.round(performance.now()), stderr: '' }
-          globalThis.gitRuns.push(entry)
-          const decoder = new TextDecoder()
-          const stderr = request.stderr
-          request.stderr = (bytes) => {
-            entry.stderr = (entry.stderr + decoder.decode(bytes, { stream: true })).slice(-400)
-            stderr(bytes)
-          }
-          return run(request).then(
-            (code) => Object.assign(entry, { code, ended: Math.round(performance.now()) }).code,
-            (error) => {
-              Object.assign(entry, { error: `${error}`, ended: Math.round(performance.now()) })
-              throw error
-            }
-          )
-        }
-      })
+      await traceGit(page)
       const dialog = page.locator('.quick-input-widget:not([style*="display: none"])')
       for (let attempt = 1; ; attempt++) {
         await runCommand(page, 'Git: Clone')
@@ -324,18 +301,7 @@ async function runRepo(repo) {
           await page.keyboard.press('Enter')
           await page.waitForTimeout(800)
         }
-        // A focus change can close the URL or folder pick, and the Git extension then drops the clone without a
-        // message. Without the trace, or when a finished clone reloads the page into its folder, it counts as started.
-        const started = await page
-          .waitForFunction(() => !globalThis.gitRuns || globalThis.gitRuns.some((run) => run.args.startsWith('clone ')), undefined, { timeout: 60_000 })
-          .then(
-            () => true,
-            (error) => {
-              if (error.name?.includes('Timeout')) return false
-              if (/context was destroyed|navigat/i.test(error.message)) return true
-              throw error
-            }
-          )
+        const started = await cloneStarted(page)
         if (started || attempt === 3 || (await dialog.count())) break
         console.log(`${repo.name}: no clone started after attempt ${attempt}, its pick closed; trying again`)
       }

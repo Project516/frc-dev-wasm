@@ -25,6 +25,7 @@ while IFS= read -r file; do
     apps/ide/tests/teams.mjs) teams=1 ;;
     apps/ide/tests/wpilib2027.mjs | apps/ide/tests/junit.mjs | apps/ide/tests/maven.mjs) jb=1 ;;
     apps/ide/tests/git.mjs | apps/ide/tests/gitBrowser.mjs) java=1 ;;
+    apps/ide/tests/gitClone.mjs) java=1 teams=1 ;;
     apps/ide/tests/tools.mjs) tools=1 ;;
     apps/ide/tests/*) ide=1 ;;
     # Builds, simulation and vendor libraries, which the team projects exercise

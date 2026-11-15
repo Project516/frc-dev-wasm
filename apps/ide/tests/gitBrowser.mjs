@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { chromium } from 'playwright-core'
 import { unzipSync, zipSync } from 'fflate'
 import { preview } from 'vite'
+import { cloneStarted, traceGit } from './gitClone.mjs'
 import { quickInputReady } from './quickInput.mjs'
 
 const SMALL_REPO = 'octocat/Hello-World'
@@ -64,6 +65,12 @@ export async function browserTests({ root, check }) {
     }
     await page.waitForTimeout(300)
     await row.click()
+    // On a busy page the palette stays up a moment, and a pick the command opens would read as the palette
+    await page.waitForFunction(
+      () => !document.querySelector('.quick-input-widget:not([style*="display: none"]) .quick-input-box input')?.value.startsWith('>'),
+      undefined,
+      { timeout: 15_000 }
+    )
   }
   const answer = async (page, text) => {
     await quickInputReady(page)
@@ -76,24 +83,29 @@ export async function browserTests({ root, check }) {
   // Git: Clone, into /workspace, the folder its dialog starts in. The clone opens as the workspace
   // folder, which reloads the page.
   const clone = async (page, repo) => {
-    // The Git extension registers its commands shortly after the workbench starts
-    for (let attempt = 0; ; attempt++) {
-      try {
-        await runCommand(page, 'Git: Clone')
-        break
-      } catch (error) {
-        if (attempt >= 5) throw error
-        await page.keyboard.press('Escape')
-        await page.waitForTimeout(2000)
-      }
-    }
-    await answer(page, `https://github.com/${repo}`)
+    await traceGit(page)
     const widget = page.locator('.quick-input-widget:not([style*="display: none"])')
-    await widget.locator('.quick-input-box input').waitFor({ timeout: 15_000 })
-    // The file dialog can still be listing the folder at the first Enter
-    for (let i = 0; i < 5 && (await widget.count()); i++) {
-      await page.waitForTimeout(800)
-      await page.keyboard.press('Enter')
+    for (let tries = 1; ; tries++) {
+      // The Git extension registers its commands shortly after the workbench starts
+      for (let attempt = 0; ; attempt++) {
+        try {
+          await runCommand(page, 'Git: Clone')
+          break
+        } catch (error) {
+          if (attempt >= 5) throw error
+          await page.keyboard.press('Escape')
+          await page.waitForTimeout(2000)
+        }
+      }
+      await answer(page, `https://github.com/${repo}`)
+      await widget.locator('.quick-input-box input').waitFor({ timeout: 15_000 })
+      // The file dialog can still be listing the folder at the first Enter
+      for (let i = 0; i < 5 && (await widget.count()); i++) {
+        await page.waitForTimeout(800)
+        await page.keyboard.press('Enter')
+      }
+      if ((await cloneStarted(page)) || tries === 3 || (await widget.count())) return
+      console.log(`${repo}: no clone started after try ${tries}, its pick closed; trying again`)
     }
   }
   // Like desktop git, the real git commits only with a name and email, from ~/.gitconfig

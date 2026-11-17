@@ -362,8 +362,8 @@ importers:
         specifier: 1.44.15
         version: 1.44.15
       just-bash:
-        specifier: 3.6.0
-        version: 3.6.0
+        specifier: 3.6.1
+        version: 3.6.1
       modern-tar:
         specifier: 0.8.6
         version: 0.8.6
@@ -1504,8 +1504,8 @@ packages:
   jsonc-parser@2.3.1:
     resolution: {integrity: sha512-H8jvkz1O50L3dMZCsLqiuB2tA7muqbSg1AtGEkN0leAqGjsUzDJir3Zwr02BhqdcITPg3ei3mZ+HjMocAknhhg==}
 
-  just-bash@3.6.0:
-    resolution: {integrity: sha512-2COjEgcHdqKXeQSiNfPAHmpwQx4S8wATaIwog83g2t645U5tom6FED4CBBdr3M+0ioX4xZ26eODw3/nD6RQ6xw==}
+  just-bash@3.6.1:
+    resolution: {integrity: sha512-+osGKzPqnX4sdOBsaHFJvg1cr3izbkj3c3cyxnK6TLEHUOQrGdtylsrg8p5QjiWqBpyzylAyAY0CPd4KCQ9EUw==}
     engines: {node: '>=20.19'}
     hasBin: true
 
@@ -2917,7 +2917,7 @@ snapshots:
 
   jsonc-parser@2.3.1: {}
 
-  just-bash@3.6.0:
+  just-bash@3.6.1:
     dependencies:
       diff: 8.0.4
       fast-xml-parser: 5.12.0

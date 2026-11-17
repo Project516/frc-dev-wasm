@@ -88,7 +88,7 @@
     "buffer": "6.0.3",
     "fflate": "0.8.3",
     "isomorphic-git": "1.44.15",
-    "just-bash": "3.6.0",
+    "just-bash": "3.6.1",
     "modern-tar": "0.8.6",
     "monaco-editor": "npm:@codingame/monaco-vscode-editor-api@39.0.4",
     "vscode": "npm:@codingame/monaco-vscode-extension-api@39.0.4"

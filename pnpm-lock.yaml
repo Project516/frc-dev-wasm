@@ -359,8 +359,8 @@ importers:
         specifier: 0.8.3
         version: 0.8.3
       isomorphic-git:
-        specifier: 1.44.16
-        version: 1.44.16
+        specifier: 1.44.17
+        version: 1.44.17
       just-bash:
         specifier: 3.6.1
         version: 3.6.1
@@ -1487,8 +1487,8 @@ packages:
   isarray@2.0.5:
     resolution: {integrity: sha512-xHjhDr3cNBK0BzdUJSPXZntQUx/mwMS5Rw4A7lPJ90XGAO6ISP/ePDNuo0vhqOZU+UD5JoodwCAAoZQd3FeAKw==}
 
-  isomorphic-git@1.44.16:
-    resolution: {integrity: sha512-ejYi++i9TdYwJoypfdNWEWQgltDqlDgvX9yX/QKa9ZSvny9iFwFXw0KgAqYxWHRqFsCacmJPiNtErfgaoq6W+Q==}
+  isomorphic-git@1.44.17:
+    resolution: {integrity: sha512-jVTvfct/ZDqutRKOWSnTTLtbkKSXlvV5bWOkRpW143tsDfUxZsnNqSPq8BgNpsviuD9OuQ/1Sz8reNb/+daVSQ==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -2896,7 +2896,7 @@ snapshots:
 
   isarray@2.0.5: {}
 
-  isomorphic-git@1.44.16:
+  isomorphic-git@1.44.17:
     dependencies:
       async-lock: 1.4.1
       clean-git-ref: 2.0.1

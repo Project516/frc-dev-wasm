@@ -19,6 +19,13 @@ const vscodeCssAsString: Plugin = {
   }
 }
 
+// The nightly duplicates the stable site, so search engines should skip it
+const noindexNightly: Plugin = {
+  name: 'noindex-nightly',
+  transformIndexHtml: () =>
+    process.env.FRC_DEV_CHANNEL === 'nightly' ? [{ tag: 'meta', attrs: { name: 'robots', content: 'noindex' } }] : []
+}
+
 // Shown in Help: About and on the Get Started page
 const version: string = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).version
 function commit(): string {
@@ -47,7 +54,7 @@ export default defineConfig({
   worker: {
     format: 'es'
   },
-  plugins: [vscodeCssAsString],
+  plugins: [vscodeCssAsString, noindexNightly],
   optimizeDeps: {
     include: [
       '@codingame/monaco-vscode-api',

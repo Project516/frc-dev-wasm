@@ -385,8 +385,8 @@ importers:
         version: '@codingame/monaco-vscode-extension-api@40.1.1'
     devDependencies:
       '@types/node':
-        specifier: 26.6.10
-        version: 26.6.10
+        specifier: 26.6.11
+        version: 26.6.11
       playwright-core:
         specifier: 1.65.0
         version: 1.65.0
@@ -395,7 +395,7 @@ importers:
         version: 7.0.2
       vite:
         specifier: 8.3.8
-        version: 8.3.8(@types/node@26.6.10)(yaml@2.9.1)
+        version: 8.3.8(@types/node@26.6.11)(yaml@2.9.1)
 
   packages/git-wasm: {}
 
@@ -426,7 +426,7 @@ importers:
         version: 7.0.2
       vite:
         specifier: 8.3.8
-        version: 8.3.8(@types/node@26.6.10)(yaml@2.9.1)
+        version: 8.3.8(@types/node@26.6.11)(yaml@2.9.1)
 
   packages/sim-gui:
     dependencies:
@@ -451,7 +451,7 @@ importers:
         version: 7.0.2
       vite:
         specifier: 8.3.8
-        version: 8.3.8(@types/node@26.6.10)(yaml@2.9.1)
+        version: 8.3.8(@types/node@26.6.11)(yaml@2.9.1)
 
   packages/vscode-git:
     dependencies:
@@ -540,7 +540,7 @@ importers:
         version: 1.65.0
       vite:
         specifier: 8.3.8
-        version: 8.3.8(@types/node@26.6.10)(yaml@2.9.1)
+        version: 8.3.8(@types/node@26.6.11)(yaml@2.9.1)
 
 packages:
 
@@ -1071,8 +1071,8 @@ packages:
   '@tybys/wasm-util@0.10.4':
     resolution: {integrity: sha512-W3c4gRigFS0T/Ma4qIYF3GDAc5AQdHb1yL5znJT1Zv1YaD9Kitx656wBjvr19qbiosmZT8lWDM5BEMynUqX65A==}
 
-  '@types/node@26.6.10':
-    resolution: {integrity: sha512-WJuPHoGB8WNQuTksNF7SOQpnH02PXeDYz4iueWbBT6/hTWnShY5F3T/hoJA3fY9+uYReDZ7pyTKKx83jQa7aGg==}
+  '@types/node@26.6.11':
+    resolution: {integrity: sha512-uUyQ2XLEz+EXh34lmS3GhKrkqn/8FU7KUiKRpk347At2bmnMVWss45yz8b4FG/tUtmV1tV/+TVkITItPROyeeQ==}
 
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
@@ -2535,7 +2535,7 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
-  '@types/node@26.6.10':
+  '@types/node@26.6.11':
     dependencies:
       undici-types: 8.9.0
 
@@ -3317,7 +3317,7 @@ snapshots:
   util-deprecate@1.0.2:
     optional: true
 
-  vite@8.3.8(@types/node@26.6.10)(yaml@2.9.1):
+  vite@8.3.8(@types/node@26.6.11)(yaml@2.9.1):
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.7
@@ -3325,7 +3325,7 @@ snapshots:
       rolldown: 1.2.18
       tinyglobby: 0.2.17
     optionalDependencies:
-      '@types/node': 26.6.10
+      '@types/node': 26.6.11
       fsevents: 2.3.3
       yaml: 2.9.1
 
